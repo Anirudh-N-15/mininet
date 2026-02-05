@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 MiniEdit: a simple network editor for Mininet
@@ -25,8 +25,9 @@ from sys import exit  # pylint: disable=redefined-builtin
 
 from mininet.log import info, debug, warn, setLogLevel
 from mininet.net import Mininet, VERSION
-from mininet.util import (netParse, ipAdd, quietRun,
-                          buildTopo, custom, customClass, StrictVersion )
+from mininet.util import netParse, ipAdd, quietRun, custom
+from distutils.version import Version
+
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import (Controller, RemoteController, NOX, OVSController,
                           CPULimitedHost, Host, Node,
