@@ -16,7 +16,7 @@ The `install.sh` script supports the following distributions:
 * Ubuntu 16.04+ (best supported, recommended)
 * Debian 7+
 * Fedora
-* CentOS 8+ / RHEL 8+ (uses dnf; older versions use yum)
+* CentOS 8+ / RHEL 8+ (uses dnf; CentOS 7 / RHEL 7 use yum)
 * SUSE Linux
 * Arch Linux
 * Raspbian (treated as Debian)

@@ -803,8 +803,8 @@ function modprobe {
 }
 
 function all {
-    if [ "$DIST" = "Fedora" -o "$DIST" = "CentOS" ]; then
-        printf "\nFedora/CentOS support (still work in progress):\n"
+    if [ "$DIST" = "Fedora" -o "$DIST" = "CentOS" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+        printf "\nFedora/CentOS/RHEL support (still work in progress):\n"
         printf " * the install.sh script options [-bfnpvw] should work.\n"
         printf " * for a basic setup just try:\n"
         printf "       install.sh -fnpv\n\n"
