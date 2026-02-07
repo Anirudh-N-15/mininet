@@ -6,11 +6,22 @@ Mininet 2.3.1b4
 ---
 
 The supported installation methods for Mininet are 1) using a
-pre-built VM image, and 2) native installation on Ubuntu. You can also
-easily create your own Mininet VM image (4).
+pre-built VM image, and 2) native installation on a supported Linux
+distribution. You can also easily create your own Mininet VM image (4).
 
-(Other distributions may be supported in the future - if you would
-like to contribute an installation script, we would welcome it!)
+### Supported Linux Distributions
+
+The `install.sh` script supports the following distributions:
+
+* Ubuntu 16.04+ (best supported, recommended)
+* Debian 7+
+* Fedora
+* CentOS 8+ / RHEL 8+ (uses dnf; older versions use yum)
+* SUSE Linux
+* Arch Linux
+* Raspbian (treated as Debian)
+
+Other distributions may work with manual installation (see section 5).
 
 1. Easiest "installation" - use our pre-built VM image!
 
@@ -42,9 +53,9 @@ like to contribute an installation script, we would welcome it!)
 
 3. Native installation from source
 
-   If you are running Ubuntu, Debian, or Fedora, you may be able to use
-   our handy `install.sh` script, which is in `util/`. Please read the
-   following sections first.
+   If you are running Ubuntu, Debian, Fedora, CentOS, RHEL, SUSE, or
+   Arch Linux, you may be able to use our handy `install.sh` script,
+   which is in `util/`. Please read the following sections first.
 
 3.1. Obtaining the Mininet source code
 
@@ -137,13 +148,14 @@ like to contribute an installation script, we would welcome it!)
 
    This takes about 4 minutes on our test system.
 
-3.2. (Experimental) Native installation from source on Fedora:
+3.2. (Experimental) Native installation from source on Fedora/CentOS:
 
    As root execute the following operations:
 
     * install git
 
-        yum install git
+        yum install git       # CentOS 7, Fedora (older)
+        dnf install git       # CentOS 8+, Fedora 22+
 
     * clone the Mininet repository
 
@@ -163,8 +175,36 @@ like to contribute an installation script, we would welcome it!)
 
         sudo mn --test pingall
 
-    Note that `install.sh -fnv `may not install all dependencies on Fedora,
-    and many tests may still fail.
+    Note that `install.sh -fnv` may not install all dependencies on
+    Fedora/CentOS, and some tests may still fail.
+
+3.3. (Experimental) Native installation from source on Arch Linux:
+
+   As root execute the following operations:
+
+    * install git
+
+        sudo pacman -S git
+
+    * clone the Mininet repository
+
+        git clone https://github.com/mininet/mininet.git
+
+    * install Mininet dependencies and Open vSwitch
+
+        util/install.sh -nv
+
+    * enable and start openvswitch
+
+        sudo systemctl enable --now ovs-vswitchd
+
+    * test the mininet installation
+
+        sudo mn --test pingall
+
+    Note: Arch Linux support is experimental. The `openvswitch`
+    package is available in the official Arch repositories. Some
+    optional components may require packages from the AUR.
 
 4. Creating your own Mininet/OpenFlow tutorial VM on Ubuntu/Debian
 
@@ -180,21 +220,33 @@ like to contribute an installation script, we would welcome it!)
 
 5. Installation on other Linux distributions
 
-   Although we don't support other Linux distributions directly, it
+   Although we don't support every Linux distribution directly, it
    should be possible to install and run Mininet with some degree of
-   manual effort. People have even gotten `mn --switch user` to run
-   in a ChromeOS container.
+   manual effort on most Linux systems. People have even gotten
+   `mn --switch user` to run in a ChromeOS container.
 
    In general, you must have:
 
    * A Linux kernel compiled with network namespace support enabled
 
-   * An compatible software switch such as Open vSwitch or
+   * A compatible software switch such as Open vSwitch or
      the Linux bridge.
 
-   * Python, `bash`, `ping`, `iperf`, etc.
+   * Python 3 (or Python 2), `bash`, `ping`, `iperf`, etc.
 
    * Root privileges (required for network device access)
+
+   * `iproute2` (the `ip` command) for network configuration
+
+   * Basic build tools (`gcc`, `make`) if compiling from source
+
+   If `install.sh` does not support your distribution, you can
+   install Mininet manually:
+
+       sudo python3 setup.py install   # or: sudo pip install .
+
+   Then install Open vSwitch using your distribution's package
+   manager, and ensure the OVS service is running.
 
    We encourage contribution of patches to the `install.sh` script to
    support other Linux distributions.

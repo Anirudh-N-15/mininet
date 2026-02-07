@@ -89,6 +89,9 @@ determine which Python version is used by default by `mn`.
 
 - Support for Ubuntu 22.04 LTS (and 20.04)
 
+- Support for multiple Linux distributions including Ubuntu, Debian,
+  Fedora, CentOS/RHEL, SUSE, and Arch Linux
+
 - More reliable testing and CI via github actions
 
 - Preliminary support for cgroups v2 (and v1)

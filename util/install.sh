@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Mininet install script for Ubuntu and Debian
+# Mininet install script for Ubuntu, Debian, Fedora, RHEL, CentOS, SUSE,
+# and Arch Linux
 # Original author: Brandon Heller
 
 # Fail on error
@@ -48,9 +49,16 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
 fi
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
-if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-    install='sudo yum -y install'
-    remove='sudo yum -y erase'
+test -e /etc/centos-release && DIST="CentOS"
+if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
+    # Use dnf if available (Fedora 22+, CentOS 8+, RHEL 8+), fall back to yum
+    if which dnf &> /dev/null; then
+        install='sudo dnf -y install'
+        remove='sudo dnf -y erase'
+    else
+        install='sudo yum -y install'
+        remove='sudo yum -y erase'
+    fi
     pkginst='sudo rpm -ivh'
     update='sudo yum'
     # Prereqs for this script
@@ -68,11 +76,20 @@ if [ "$DIST" = "SUSE Linux" ]; then
 		$install openSUSE-release
     fi
 fi
+test -e /etc/arch-release && DIST="Arch"
+if [ "$DIST" = "Arch" ]; then
+    install='sudo pacman -S --noconfirm --needed'
+    remove='sudo pacman -Rs --noconfirm'
+    pkginst='sudo pacman -U --noconfirm'
+    update='sudo pacman -Sy'
+fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
     RELEASE=`lsb_release -rs`
     CODENAME=`lsb_release -cs`
 fi
+# Restore Arch detection since lsb_release may not be available
+test -e /etc/arch-release && DIST="Arch"
 echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 
 # Kernel params
@@ -83,9 +100,11 @@ KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 # Treat Raspbian as Debian
 [ "$DIST" = 'Raspbian' ] && DIST='Debian'
 
-DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'
+DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|CentOS|SUSE LINUX|Arch'
 if ! echo $DIST | egrep "$DISTS" >/dev/null; then
     echo "Install.sh currently only supports $DISTS."
+    echo "For other distributions, see the INSTALL file for manual"
+    echo "installation guidance."
     exit 1
 fi
 
@@ -161,12 +180,17 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
             ethtool help2man net-tools
         $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming \
             ${PYPKG}-pexpect
+    elif [ "$DIST" = "Arch" ]; then
+        $install gcc make socat psmisc xterm openssh iperf3 \
+            iproute2 inetutils ethtool help2man net-tools \
+            python-setuptools python-pip python-pyflakes \
+            python-pylint python-pexpect tk
     elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install gcc make socat psmisc xterm openssh iperf \
 			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
@@ -233,10 +257,12 @@ function of {
     echo "Installing OpenFlow reference implementation..."
     cd $BUILD_DIR
     $install autoconf automake libtool make gcc
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install git pkgconfig glibc-devel
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
        $install git pkgconfig glibc-devel
+    elif [ "$DIST" = "Arch" ]; then
+        $install git pkgconf glibc
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
@@ -302,10 +328,12 @@ function of13 {
 function install_wireshark {
     if ! which wireshark; then
         echo "Installing Wireshark"
-        if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+        if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
             $install wireshark wireshark-gnome
 		elif [ "$DIST" = "SUSE LINUX"  ]; then
 			$install wireshark
+        elif [ "$DIST" = "Arch" ]; then
+            $install wireshark-qt
         else
             $install wireshark tshark
         fi
@@ -420,11 +448,17 @@ function ubuntuOvs {
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install openvswitch
         if ! $install openvswitch-controller; then
             echo "openvswitch-controller not installed"
         fi
+        return
+    fi
+
+    if [ "$DIST" = "Arch" ]; then
+        $install openvswitch
+        sudo systemctl enable --now ovs-vswitchd
         return
     fi
 
@@ -500,8 +534,10 @@ function ivs {
 
     # Install dependencies
     $install gcc make
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install git pkgconfig libnl3-devel libcap-devel openssl-devel
+    elif [ "$DIST" = "Arch" ]; then
+        $install git pkgconf libnl libcap openssl
     else
         $install git-core pkg-config libnl-3-dev libnl-route-3-dev \
             libnl-genl-3-dev
@@ -647,10 +683,12 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
 
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install net-snmp-devel libpcap-devel libconfig-devel
+    elif [ "$DIST" = "Arch" ]; then
+        $install net-snmp libpcap libconfig
     else
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
@@ -723,8 +761,10 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
     $install ntp
 
     # Install vconfig for VLAN example
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install vconfig
+    elif [ "$DIST" = "Arch" ]; then
+        echo "VLAN support is built into iproute2 on Arch"
     else
         $install vlan
     fi
@@ -763,11 +803,15 @@ function modprobe {
 }
 
 function all {
-    if [ "$DIST" = "Fedora" ]; then
-        printf "\nFedora 18+ support (still work in progress):\n"
-        printf " * Fedora 18+ has kernel 3.10 RPMS in the updates repositories\n"
-        printf " * Fedora 18+ has openvswitch 1.10 RPMS in the updates repositories\n"
+    if [ "$DIST" = "Fedora" -o "$DIST" = "CentOS" ]; then
+        printf "\nFedora/CentOS support (still work in progress):\n"
         printf " * the install.sh script options [-bfnpvw] should work.\n"
+        printf " * for a basic setup just try:\n"
+        printf "       install.sh -fnpv\n\n"
+        exit 3
+    fi
+    if [ "$DIST" = "Arch" ]; then
+        printf "\nArch Linux support (still work in progress):\n"
         printf " * for a basic setup just try:\n"
         printf "       install.sh -fnpv\n\n"
         exit 3
@@ -845,7 +889,8 @@ function usage {
     printf '\nUsage: %s [-abcdefhikmnprtvVwxy03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
-    printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
+    printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+,\n' >&2
+    printf 'Debian, Fedora, CentOS, RHEL, SUSE, and Arch Linux.\n' >&2
     printf 'If you run into trouble, try\n' >&2
     printf 'installing one thing at a time, and looking at the \n' >&2
     printf 'specific installation function in this script.\n\n' >&2
