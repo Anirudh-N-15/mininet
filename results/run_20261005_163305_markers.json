@@ -1,0 +1,25 @@
+{
+  "run_id": "20261005_163305",
+  "events": [
+    {
+      "timestamp": "2026-10-05T16:33:06.343445+00:00",
+      "phase": "baseline",
+      "event": "start"
+    },
+    {
+      "timestamp": "2026-10-05T16:33:36.344921+00:00",
+      "phase": "baseline",
+      "event": "end"
+    },
+    {
+      "timestamp": "2026-10-05T16:33:36.344966+00:00",
+      "phase": "syn_flood",
+      "event": "start"
+    },
+    {
+      "timestamp": "2026-10-05T16:34:06.346714+00:00",
+      "phase": "syn_flood",
+      "event": "end"
+    }
+  ]
+}

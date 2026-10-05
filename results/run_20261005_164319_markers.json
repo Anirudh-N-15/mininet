@@ -1,0 +1,30 @@
+{
+  "run_id": "20261005_164319",
+  "baseline_start": "2026-10-05T16:43:19.764870+00:00",
+  "baseline_end": "2026-10-05T16:43:49.766168+00:00",
+  "attack_start": "2026-10-05T16:43:49.766271+00:00",
+  "attack_end": "2026-10-05T16:44:19.768063+00:00",
+  "experiment_end": "2026-10-05T16:44:20.469849+00:00",
+  "events": [
+    {
+      "timestamp": "2026-10-05T16:43:19.764870+00:00",
+      "phase": "baseline",
+      "event": "start"
+    },
+    {
+      "timestamp": "2026-10-05T16:43:49.766168+00:00",
+      "phase": "baseline",
+      "event": "end"
+    },
+    {
+      "timestamp": "2026-10-05T16:43:49.766271+00:00",
+      "phase": "syn_flood",
+      "event": "start"
+    },
+    {
+      "timestamp": "2026-10-05T16:44:19.768063+00:00",
+      "phase": "syn_flood",
+      "event": "end"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "run_id": "20261005_161914",
+  "attacker": "10.0.0.1",
+  "victim": "10.0.0.10",
+  "baseline_seconds": 30,
+  "attack_seconds": 30,
+  "metrics_path": "/home/anirudh/mininet/results/run_20261005_161914_metrics.csv",
+  "markers_path": "/home/anirudh/mininet/results/run_20261005_161914_markers.json",
+  "results": {
+    "metrics_available": false
+  }
+}
