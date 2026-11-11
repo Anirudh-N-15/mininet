@@ -177,10 +177,11 @@ function mn_deps {
         pep8=pep8
         # Starting around 20.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
-        if [ "$DIST" = "Ubuntu" -a `expr $RELEASE '>=' 20.04` = "1" ]; then
+        if [ "$DIST" = "Ubuntu" ] && version_ge "$RELEASE" 20.04; then
                 pf=pyflakes3
+                pep8=python3-pep8
         fi
-        # Debian 11 "bullseye" renamed
+        # Newer Debian and Ubuntu releases renamed
         # * pep8 to python3-pep8
         # * pyflakes to pyflakes3
         if [ "$DIST" = "Debian" -a `expr $RELEASE '>=' 11` = "1" ]; then
@@ -190,7 +191,7 @@ function mn_deps {
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint $pep8 \
-                 net-tools ${PYPKG}-tk
+                 net-tools ${PYPKG}-pexpect ${PYPKG}-tk
 
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
@@ -203,10 +204,16 @@ function mn_deps {
             sudo ${PYTHON} get-pip.py
             rm get-pip.py
         fi
-       ${python} -m pip install pexpect
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
-        $install cgroupfs-mount
+        cgroupfs_candidate=$(apt-cache policy cgroupfs-mount |
+            sed -n 's/^  Candidate: //p')
+        if [ -n "$cgroupfs_candidate" ] &&
+           [ "$cgroupfs_candidate" != "(none)" ]; then
+            $install cgroupfs-mount
+        else
+            echo "cgroupfs-mount is not available; skipping"
+        fi
     fi
 
     echo "Installing Mininet core"

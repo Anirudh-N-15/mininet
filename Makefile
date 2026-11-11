@@ -4,6 +4,8 @@ EXAMPLES = mininet/examples/*.py
 MN = bin/mn
 PYTHON ?= python
 PYMN = $(PYTHON) -B bin/mn
+PIP_FLAGS = $(shell $(PYTHON) -m pip help install 2>/dev/null | \
+	grep -q -- --break-system-packages && echo --break-system-packages)
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
@@ -58,15 +60,15 @@ install-manpages: $(MANPAGES)
 
 install: install-mnexec install-manpages
 #	This seems to work on all pip versions
-	$(PYTHON) -m pip uninstall -y mininet || true
-	$(PYTHON) -m pip install .
+	$(PYTHON) -m pip uninstall $(PIP_FLAGS) -y mininet || true
+	$(PYTHON) -m pip install $(PIP_FLAGS) .
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
-	$(PYTHON) -m pip uninstall -y mininet || true
-	$(PYTHON) -m pip install -e . --no-binary :all:
+	$(PYTHON) -m pip uninstall $(PIP_FLAGS) -y mininet || true
+	$(PYTHON) -m pip install $(PIP_FLAGS) -e . --no-binary :all:
 
 man: $(MANPAGES)
 
