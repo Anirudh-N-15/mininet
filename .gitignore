@@ -12,3 +12,6 @@ doc/html
 doc/latex
 trunk
 
+
+# Ryu run logs (machine-specific)
+results/ryu_*.log
