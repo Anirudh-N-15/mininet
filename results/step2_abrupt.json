@@ -1,0 +1,14 @@
+{
+  "mode": "abrupt",
+  "growth_per_s": 0.02,
+  "cap": 10.0,
+  "attack_seconds": 30,
+  "baseline_syn_rate_mean": 5.85,
+  "baseline_syn_rate_sd": 0.49,
+  "attack_packets_sent": 1512,
+  "fidelity_measured_over_sent": 0.98,
+  "amplification_reached": 9.72,
+  "ewma_alarms": 31,
+  "first_alarm_s_after_attack_start": 1.2,
+  "amplification_at_first_alarm": 10.25
+}

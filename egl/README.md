@@ -6,8 +6,8 @@ Built one step at a time. The design is in the Project doc
 | Step | What | Status |
 |---|---|---|
 | 1 | Two-table OVS pipeline + counter telemetry (x_n, e_n) | **done, tested on real OVS** |
-| 2 | Frog-boiling ramp attacker | next |
-| 3 | Detectors: Static, EWMA-z, Half-Space Trees | |
+| 2 | Frog-boiling ramp attacker | **done, tested on real OVS** |
+| 3 | Detectors: Static, EWMA-z, Half-Space Trees | next |
 | 4 | Learning Gate + anchor baseline | |
 | 5 | Mitigator (OpenFlow meter) + experiment matrix | |
 
@@ -58,7 +58,7 @@ packet ─► TABLE 0 "count"                         ─► TABLE 1 "forward"
 
 ### Run it
 ```bash
-python3 -m unittest egl.test_telemetry      # unit tests, no sudo
+python3 -m unittest egl.test_telemetry egl.test_attack   # unit tests, no sudo
 ./egl/run_step1.sh                          # real network, about 50 s
 ./egl/run_step1.sh user                     # if OVS kernel module is missing
 ```
@@ -90,3 +90,58 @@ real port.
   The location check therefore also reads ARP.
 * **e_n can read slightly above 1** for a window or two after a phase change,
   when FINs land in a window whose SYNs fell in the previous one.
+
+## Step 2: the frog-boiling attacker
+
+### The idea in plain words
+An adaptive detector keeps re-learning what "normal" looks like. If the flood
+grows slowly enough, every second looks only a little above normal, so the
+detector learns it. Step 2 builds that attacker and checks the claim on a real
+network: **a 10x SYN flood that creeps up at +2 %/s is never flagged, while the
+same 10x flood arriving at once is flagged within about a second.**
+
+### What was built
+| File | Role |
+|---|---|
+| `attack.py` | The schedules, as maths: abrupt = jump to 10x; ramp = total rate x (1.02)^t up to 10x (10x after ln 10 / ln 1.02 = 116 s). `Pacer` turns a changing rate into "send n packets now" without losing fractions. |
+| `syn_sender.py` | Raw-socket SYN generator (random spoofed source IP, port, sequence number; correct checksums). It follows the schedule continuously and logs what it really sent each second. |
+| `detectors.py` | EWMA-z, the adaptive detector of recent SDN papers. It learns only from windows it calls normal (the rule the ramp abuses), with a Poisson noise floor sqrt(mu) because SYN rates are counts. |
+| `scenario.py` | Shared network setup for all steps (see below). |
+| `web_server.py` | The protected server: http.server with a realistic 511 backlog (nginx/Apache default). |
+| `check_step2.py` | 40 s of users, then the attack; replays the measured SYN rate through EWMA-z; writes `results/step2_<mode>.json` and `_trace.csv`. |
+| `plot_step2.py` | The figure `results/step2_ramp_vs_abrupt.png`. |
+| `lib.sh` | Shared Ryu start/stop for the run scripts; passes variables to sudo explicitly (newer sudo ignores `-E`). |
+
+**Why not hping3 for the ramp:** its rate is fixed for the whole run, and one
+hping3 per second fails because it lingers after its last packet (100 packets
+meant for 1 s took 2.0 s). hping3 is still used for constant floods (step 1).
+
+### Run it
+```bash
+./egl/run_step2.sh            # abrupt then ramp, about 4.5 minutes
+python3 -m egl.plot_step2     # draws the figure from the results
+```
+
+### Result (OVS 3.3.9 userspace datapath, Ryu 4.34; users = 5.85 +/- 0.49 SYN/s)
+| Attack | Measured / sent | Reached | EWMA alarms | First alarm |
+|---|---|---|---|---|
+| abrupt 10x | 0.98 | 9.7x | 31 | 1.2 s after start |
+| ramp +2 %/s | 0.993 | **10.3x** | **0** | never |
+
+### Realism fixes made in this step (they also apply to step 1)
+* **The server can now answer spoofed SYNs.** Its default route points at a
+  made-up gateway pinned to h5's MAC. Before, it had no route, so the kernel
+  discarded spoofed SYNs without holding them half-open, which understated the
+  flood's damage.
+* **A realistic listen backlog (511) instead of http.server's 5.**
+* **Linux keeps admitting known clients under a flood.** With SYN cookies off,
+  once the half-open queue is 3/4 full (384 of 512) the kernel drops SYNs from
+  unfamiliar addresses but still admits clients it recently completed
+  connections with. Our returning users kept working (2 ms connects) while
+  1,005 flood SYNs were dropped; a brand-new visitor would be locked out.
+* **Step 1's recovery is now reported, not required.** Half-open entries live
+  about 63 s (SYN-ACK retries at 1+2+4+8+16+32 s), so a server can stay
+  clogged after the flood stops.
+* **One-window dips in the trace** (e.g. 24 SYN/s where about 45 arrived) come
+  from OVS refreshing rule counters on its own timer, not from the attacker,
+  which logged 43 sent that second. This is noted as a measurement limitation.
