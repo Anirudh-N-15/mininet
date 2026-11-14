@@ -16,3 +16,4 @@ for MODE in abrupt ramp; do
   stop_ryu
 done
 echo; echo "Summaries: results/step2_abrupt.json  results/step2_ramp.json"
+plot egl.plot_step2

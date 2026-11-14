@@ -32,9 +32,10 @@ from egl.telemetry import FIELDS, Snapshot, TelemetryWindow
 class EventTelemetry(event.EventBase):
     """One measurement window. `window` is an egl.telemetry.Window."""
 
-    def __init__(self, window):
+    def __init__(self, window, wall=None):
         super().__init__()
         self.window = window
+        self.wall = wall   # wall-clock time of the poll (epoch seconds)
 
 
 class EGLController(app_manager.RyuApp):
@@ -185,7 +186,7 @@ class EGLController(app_manager.RyuApp):
         if win is None:
             return
         self._write_csv(wall, snap, win)
-        self.send_event_to_observers(EventTelemetry(win))
+        self.send_event_to_observers(EventTelemetry(win, wall))
 
     # ---------------------------------------------------------------- CSV --
     COLUMNS = ["wall_time", "dt", *("%s_total" % k for k in FIELDS),

@@ -17,6 +17,8 @@ What it sets up, and why:
     would never occupy the server's half-open queue, which is unrealistic.
 """
 
+import math
+import threading
 import time
 
 from mininet.log import setLogLevel
@@ -27,6 +29,7 @@ from egl.topology import SERVER_HOST, SERVER_IP, EGLTopology
 
 GATEWAY_IP = "10.0.0.254"
 GATEWAY_HOST = "h5"   # absorbs the server's replies to spoofed sources
+CROWD_HOSTS = ("h2", "h3", "h4", "h6", "h7", "h8", "h9")  # never h1/h5/h10
 
 
 def curl_loop(server_ip, period=0.5):
@@ -74,6 +77,27 @@ class Scenario:
         for name in names:
             self.procs.append(self.net[name].popen(
                 curl_loop(SERVER_IP, period), shell=True))
+
+    def start_crowd(self, start_users, factor, seconds, period=0.5):
+        """A legitimate flash crowd: the number of users grows from
+        start_users to start_users*factor exponentially over `seconds`
+        (user k joins at t = seconds * ln(k/start_users) / ln(factor)).
+        Users are spread over CROWD_HOSTS; each is one more curl loop.
+        Returns immediately; the joins happen on a background thread."""
+        target = int(round(start_users * factor))
+        joins = [seconds * math.log(k / start_users) / math.log(factor)
+                 for k in range(start_users + 1, target + 1)]
+
+        def run():
+            t0 = time.time()
+            for i, at in enumerate(joins):
+                time.sleep(max(0.0, t0 + at - time.time()))
+                host = CROWD_HOSTS[(start_users + i) % len(CROWD_HOSTS)]
+                self.procs.append(self.net[host].popen(
+                    curl_loop(SERVER_IP, period), shell=True))
+
+        threading.Thread(target=run, daemon=True).start()
+        return target
 
     def run_bg(self, host, cmd):
         proc = self.net[host].popen(cmd, shell=True)

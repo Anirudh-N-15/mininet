@@ -7,8 +7,8 @@ Built one step at a time. The design is in the Project doc
 |---|---|---|
 | 1 | Two-table OVS pipeline + counter telemetry (x_n, e_n) | **done, tested on real OVS** |
 | 2 | Frog-boiling ramp attacker | **done, tested on real OVS** |
-| 3 | Detectors: Static, EWMA-z, Half-Space Trees | next |
-| 4 | Learning Gate + anchor baseline | |
+| 3 | Detectors: Static, EWMA-z, Half-Space Trees | **done, tested on real OVS** |
+| 4 | Learning Gate + anchor baseline | next |
 | 5 | Mitigator (OpenFlow meter) + experiment matrix | |
 
 ## Step 1: what was built
@@ -58,7 +58,7 @@ packet ─► TABLE 0 "count"                         ─► TABLE 1 "forward"
 
 ### Run it
 ```bash
-python3 -m unittest egl.test_telemetry egl.test_attack   # unit tests, no sudo
+python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors   # 32 unit tests, no sudo
 ./egl/run_step1.sh                          # real network, about 50 s
 ./egl/run_step1.sh user                     # if OVS kernel module is missing
 ```
@@ -145,3 +145,71 @@ python3 -m egl.plot_step2     # draws the figure from the results
 * **One-window dips in the trace** (e.g. 24 SYN/s where about 45 arrived) come
   from OVS refreshing rule counters on its own timer, not from the attacker,
   which logged 43 sent that second. This is noted as a measurement limitation.
+
+## Step 3: three detectors, live, side by side
+
+### The idea in plain words
+A detector that only looks at traffic volume can be built two ways. It can
+learn "normal" once and never change (Static), or keep learning (EWMA,
+Half-Space Trees). Step 3 runs all three live on the same measurements and
+shows the dilemma the paper is built on:
+
+* **Static** catches the slow attack, but also raises a **false alarm** when
+  real users grow (a flash crowd).
+* **The adaptive detectors** accept real growth, so a slow attack walks right
+  past them.
+* In volume terms a slow attack and a flash crowd look the same, so **no
+  volume-only detector can tell them apart**. Step 4 adds the evidence that can.
+
+### What was built
+| File | Role |
+|---|---|
+| `detectors.py` | One interface for all detectors: `observe(rates, dt, allow_learning)`. A detector scores the window, then learns from it only if it did not alarm **and** `allow_learning` is true (the hook step 4's gate uses). Static, EWMA, and Half-Space Trees (Tan, Ting & Liu, IJCAI 2011) written from the paper in plain Python: 25 random trees, depth 10, 20-window reference, features log(SYN rate) and log(packets to server). Detectors never see the completion ratio, so any later gain is the gate's alone. |
+| `detector_app.py` | Ryu app: listens to step 1's `EventTelemetry`, runs every detector on each window, logs `results/step3_<scenario>_detectors.csv`, publishes `EventAlarm` (for step 5). |
+| `scenario.py` | Adds `start_crowd`: legitimate users grow exponentially (3 to 15 in 60 s) on h2-h4, h6-h9. |
+| `check_step3.py`, `run_step3.sh` | 60 s warm-up, then abrupt / ramp / crowd; a fresh Ryu per scenario. |
+| `plot_step3.py` | The figure `results/step3_detectors.png`. |
+| `lib.sh` | Loads Ryu apps by module name (see below), checks Open vSwitch is running, and draws figures with the Ryu env's python (it has matplotlib). |
+
+### Run it
+```bash
+./egl/run_step3.sh                 # abrupt, crowd, ramp: about 13 minutes
+./egl/run_step3.sh kernel crowd    # just one scenario
+```
+
+### Result (OVS 3.3.9 userspace datapath, Ryu 4.34; users = 5.8 SYN/s)
+| Scenario | Static | EWMA | Half-Space Trees |
+|---|---|---|---|
+| Attack: abrupt 10x | alarm 1.2 s | alarm 1.2 s | alarm 1.2 s |
+| Attack: ramp +0.5 %/s to 10.4x (8 min) | alarm at 2.2x (144 s) | **never** | **never** |
+| Legit: users grow 5x in 60 s | **false alarm** at 2.6x (32 s) | quiet | **false alarm** at 2.6x (32 s) |
+
+No detector raised an alarm during any warm-up.
+
+**Simulation sweep** (real baseline noise resampled, paced attacker, 10 seeds per row):
+
+| 10 seeds each | Static | EWMA | HST |
+|---|---|---|---|
+| Ramp +0.5 %/s | 10/10 alarm @2.4x | 0/10 | 1/10 |
+| Ramp +1 %/s | 10/10 @2.4x | 0/10 | 8/10 @2.7x |
+| Ramp +2 %/s | 10/10 @2.4x | 0/10 | 10/10 @2.1x |
+| **Legit** crowd x5 in 60 s | **10/10 false** | 0/10 | **10/10 false** |
+| **Legit** crowd x5 in 180 s | **10/10 false** | 0/10 | **8/10 false** |
+| **Legit** growth x2 in 300 s | 0/10 | 0/10 | 3/10 false |
+
+HST resists fast ramps because it compares each second with a 20 s block of
+history, but an attacker who knows it simply ramps slower (+0.5 %/s). The
+same property makes it false-alarm on real crowds.
+
+### Notes for the paper
+* **HST alarms when the attack stops.** In the ramp run, HST raised a few
+  alarms right after the attack ended: having learned "10x is normal", the
+  sudden return to normal looked anomalous. These come after the attack and
+  are not counted as detections. They illustrate the poisoning nicely.
+* **HST warm-up.** It needs 40 quiet windows: 20 to build its first reference
+  and 20 to calibrate its threshold (0.5 x the lowest calibration score). With
+  only 34, an attack inside calibration is learned as normal, so step 3 uses a
+  60 s warm-up.
+* **Load Ryu apps by module name** (`egl.egl_controller egl.detector_app`),
+  not by file path. Then both apps share one copy of `EventTelemetry`, so
+  events are delivered.

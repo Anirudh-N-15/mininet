@@ -1,0 +1,25 @@
+{
+  "scenario": "abrupt",
+  "baseline_syn_rate": 5.84,
+  "peak_x_fold": 11.45,
+  "detectors": {
+    "static": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.08
+    },
+    "ewma": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.08
+    },
+    "hst": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.08
+    }
+  }
+}
