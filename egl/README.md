@@ -8,8 +8,8 @@ Built one step at a time. The design is in the Project doc
 | 1 | Two-table OVS pipeline + counter telemetry (x_n, e_n) | **done, tested on real OVS** |
 | 2 | Frog-boiling ramp attacker | **done, tested on real OVS** |
 | 3 | Detectors: Static, EWMA-z, Half-Space Trees | **done, tested on real OVS** |
-| 4 | Learning Gate + anchor baseline | next |
-| 5 | Mitigator (OpenFlow meter) + experiment matrix | |
+| 4 | Learning Gate + anchor baseline | **done, tested on real OVS** |
+| 5 | Mitigator (OpenFlow meter) + experiment matrix | next |
 
 ## Step 1: what was built
 
@@ -58,7 +58,7 @@ packet ─► TABLE 0 "count"                         ─► TABLE 1 "forward"
 
 ### Run it
 ```bash
-python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors   # 32 unit tests, no sudo
+python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors egl.test_gate   # 41 unit tests
 ./egl/run_step1.sh                          # real network, about 50 s
 ./egl/run_step1.sh user                     # if OVS kernel module is missing
 ```
@@ -213,3 +213,66 @@ same property makes it false-alarm on real crowds.
 * **Load Ryu apps by module name** (`egl.egl_controller egl.detector_app`),
   not by file path. Then both apps share one copy of `EventTelemetry`, so
   events are delivered.
+
+## Step 4: the Learning Gate (the contribution)
+
+### The idea in plain words
+Adaptive detectors decide what to learn by asking "does this look normal?".
+A slow attack is built to pass that test. The gate asks a different question:
+**"did the server actually finish these connections?"**
+
+The completion ratio e_n (server FINs / client SYNs over 5 s) answers it:
+* Real users, even a sudden crowd of them, finish their connections, so
+  e_n stays near 1.
+* Every spoofed SYN pulls it down: with the attack at m x the users' rate,
+  e_n is about 1/m.
+
+A gated detector may learn only while e_n >= tau = 0.7, i.e. until the attack
+adds about 43 % on top of the users. After that its idea of "normal" is
+frozen, and the rest of the ramp sticks out.
+
+The gate never raises alarms and never changes a detector's alarm rule. It
+only controls learning. So it fixes poisoning (missed slow attacks), but not a
+detector that alarms on any growth (HST's false alarms on real crowds).
+
+### What was built
+| File | Role |
+|---|---|
+| `gate.py` | `LearningGate.decide(rates, completion)` returns open/closed plus the reason (`evidence`, `low-completion`, `no-traffic`, `too-fast`). It keeps an **anchor**: the median/MAD SYN rate of windows it trusted (the clean rate step 5's mitigator will enforce), and an optional **drift budget** (off by default; for the ablation study). |
+| `detector_app.py` | Runs plain and gated copies side by side: `EGL_DETECTORS=static,ewma,hst,ewma_egl,hst_egl`. One gate decision per window; the CSV logs `gate_open`, `gate_reason`, `anchor_syn`. |
+| `check_step3.py` | Now generic (`--prefix step4`): reads the detector list from the CSV, reports windows with the gate closed. |
+| `plot_step3.py` | `--prefix step4` adds a grey "gate closed" strip. |
+| `run_step4.sh` | abrupt, crowd and ramp scenarios. |
+| `test_gate.py` | 9 tests, including the paper's claim in miniature. |
+
+### Run it
+```bash
+./egl/run_step4.sh                 # about 13 minutes; figure: results/step4_detectors.png
+EGL_TAU=0.5 ./egl/run_step4.sh     # try another threshold
+```
+
+### Result (OVS 3.3.9 userspace datapath, Ryu 4.34; users = 5.8-5.9 SYN/s)
+| Scenario | Static | EWMA | HST | **EWMA + gate** | HST + gate |
+|---|---|---|---|---|---|
+| Attack: abrupt 10x | 0.7 s | 0.7 s | 0.7 s | 0.7 s | 0.7 s |
+| Attack: ramp +0.5 %/s to 10.4x | 2.21x (144 s) | never | never | **2.89x (200 s)** | 1.87x (109 s) |
+| Legit: users grow 5x in 60 s | false alarm 2.56x | quiet | false alarm 2.05x | **quiet** | false alarm 2.05x |
+
+* **EWMA + gate is the only detector that catches the slow attack and stays
+  quiet for real users.**
+* The gate closed 72 s into the ramp, at 1.43x, exactly where 1/m falls below
+  0.7. It stayed open throughout the flash crowd (0 closed windows) and
+  through every warm-up.
+* The theory predicted EWMA + gate would alarm at about 2.9x after about
+  213 s. Live: 2.89x at 200 s.
+* An abrupt flood's first alarm window only partly overlaps the attack, hence
+  "2.57x" in the JSON at 0.7 s.
+
+### Notes for the paper
+* **The gate stays closed briefly after a flood ends** (visible after the
+  abrupt attack): half-open entries are still being retried, so completion
+  takes a few seconds to recover. Learning simply resumes then. Nothing is
+  lost, and no false alarm results.
+* **HST + gate catches the ramp earliest (1.87x)** but still false-alarms on
+  crowds. Its alarm rule is the limit, not its learning, so the gate
+  complements an adaptive detector rather than replacing a good one.
