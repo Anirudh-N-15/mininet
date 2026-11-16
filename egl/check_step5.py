@@ -42,7 +42,11 @@ def policy_label():
     on = os.environ.get("EGL_MITIGATE_ON", "ewma_egl")
     if on == "none":
         return "none"
-    return "%s-%s" % (on, "bypass" if os.environ.get("EGL_BYPASS", "1") == "1" else "meter")
+    label = "%s-%s" % (on, "bypass" if os.environ.get("EGL_BYPASS", "1") == "1" else "meter")
+    margin = os.environ.get("EGL_METER_MARGIN", "")
+    if margin and float(margin) != 1.5:
+        label += "-m%s" % margin
+    return label
 
 
 def mitigation_spans(path, t_end):
@@ -76,9 +80,10 @@ def main():
     ap.add_argument("--cap", type=float, default=10.0)
     ap.add_argument("--pool", type=int, default=20, help="client addresses per user host")
     ap.add_argument("--base", type=float, default=6.0)
+    ap.add_argument("--suffix", default="", help="appended to result names, e.g. _r2")
     args = ap.parse_args()
     label = policy_label()
-    tag = "step5_%s_%s" % (args.scenario, label)
+    tag = "step5_%s_%s%s" % (args.scenario, label, args.suffix)
     res = os.path.abspath(args.results)
     client_dir = os.path.join(res, tag + "_clients")
     half_open_log = os.path.join(res, tag + "_half_open.log")
@@ -142,7 +147,8 @@ def main():
     half = um.load_half_open(half_open_log)
     warm = [(t_users + SETTLE, t_event)]
     summary = {
-        "scenario": args.scenario, "policy": label,
+        "scenario": args.scenario, "policy": label, "growth_per_s": args.growth,
+        "t_users": round(t_users, 3), "t_event": round(t_event, 3), "t_end": round(t_end, 3),
         "baseline_syn_rate": round(base_mean, 2),
         "first_alarm_s": None if first_alarm is None else round(first_alarm, 1),
         "mitigation_seconds": round(sum(b - a for a, b in mitigated), 1),

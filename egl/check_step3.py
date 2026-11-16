@@ -24,7 +24,7 @@ import os
 import time
 
 from egl.attack import seconds_to_reach
-from egl.scenario import Scenario
+from egl.scenario import Scenario, bot_addresses
 from egl.topology import SERVER_IP
 
 USERS = ("h2", "h3", "h6")
@@ -45,10 +45,13 @@ def main():
     ap.add_argument("--crowd-seconds", type=float, default=60.0)
     ap.add_argument("--base", type=float, default=6.0, help="attacker's estimate of users' SYN/s")
     ap.add_argument("--prefix", default="step3", help="result file prefix (step4 for the gate)")
+    ap.add_argument("--attacker", choices=("spoofed", "completing"), default="spoofed",
+                    help="spoofed SYN flood, or real bots doing full HTTP requests")
     args = ap.parse_args()
     out_dir = os.path.dirname(os.path.abspath(args.detector_csv))
 
-    with Scenario(args.datapath) as sc:
+    bots = 20 if args.attacker == "completing" else 0
+    with Scenario(args.datapath, bots=bots) as sc:
         sc.start_users(USERS)
         t_users = time.time()
         time.sleep(args.warmup)
@@ -60,10 +63,12 @@ def main():
             dur = (seconds_to_reach(args.cap, args.growth) + 20
                    if args.scenario == "ramp" else 30)
             mode = "ramp" if args.scenario == "ramp" else "abrupt"
+            tool = ("egl.http_flood --sources %s" % ",".join(bot_addresses(bots))
+                    if args.attacker == "completing" else "egl.syn_sender")
             sender = sc.run_bg(ATTACKER, (
-                "python3 -m egl.syn_sender --dst %s --mode %s --base %s --growth %s "
+                "python3 -m %s --dst %s --mode %s --base %s --growth %s "
                 "--cap %s --duration %s --log %s"
-                % (SERVER_IP, mode, args.base, args.growth, args.cap, dur,
+                % (tool, SERVER_IP, mode, args.base, args.growth, args.cap, dur,
                    os.path.join(out_dir, "%s_%s_attack.csv" % (args.prefix, args.scenario)))))
             sender.wait(timeout=dur + 30)
         t_end = time.time()
@@ -78,7 +83,10 @@ def main():
     during = [r for r in rows if t_event <= float(r["wall_time"]) <= t_end]
     peak = max(float(r["syn_rate"]) for r in during) / base_mean
 
-    summary = {"scenario": args.scenario, "baseline_syn_rate": round(base_mean, 2),
+    summary = {"scenario": args.scenario, "attacker": args.attacker,
+               "t_users": round(t_users, 3), "t_event": round(t_event, 3),
+               "t_end": round(t_end, 3),
+               "baseline_syn_rate": round(base_mean, 2),
                "peak_x_fold": round(peak, 2), "detectors": {}}
     if args.scenario == "ramp":
         summary["growth_per_s"] = args.growth

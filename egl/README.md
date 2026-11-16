@@ -59,7 +59,7 @@ packet ─► TABLE 0 "count"                         ─► TABLE 1 "forward"
 
 ### Run it
 ```bash
-python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors egl.test_gate egl.test_mitigation   # 51 unit tests
+python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors egl.test_gate egl.test_mitigation egl.test_eval   # 57 unit tests
 ./egl/run_step1.sh                          # real network, about 50 s
 ./egl/run_step1.sh user                     # if OVS kernel module is missing
 ```
@@ -354,3 +354,49 @@ Mitigation started 0.9 s into the abrupt flood and 201 s (at 2.9x) into the ramp
 * **Brand-new visitors** who arrive during an attack must still squeeze
   through the meter before they can be verified. In our pools most addresses
   were verified during warm-up. Say so as a limitation.
+
+## Step 5b: the full evaluation (run it overnight)
+
+### What it measures
+| Stage | Question | Runs | Time (approx.) |
+|---|---|---|---|
+| `detection` | All 5 detectors on abrupt / flash crowd / ramp +0.5 %/s | 5 repeats each | 75 min |
+| `growth` | Does ramp speed matter? (+1 %/s, +2 %/s) | 3 repeats each | 27 min |
+| `completing` | **Limitation:** 20 bots with real addresses doing full HTTP requests | 3 repeats | 11 min |
+| `mitigation` | none / plain meter / bypass on abrupt, crowd (Static acts), ramp +1 %/s | 3 repeats each | 100 min |
+| `margin` | Meter allowance 0.5x, 1x, 2.5x the clean rate | 2 repeats each | 15 min |
+
+The **gate threshold tau** and the **drift budget** need no extra runs: the
+analysis replays every recorded run offline with other settings (the gate and
+detectors are pure Python), so each setting is compared on identical traffic.
+
+### How to run it on the laptop
+```bash
+cd ~/mininet && git pull
+python3 -m unittest egl.test_eval egl.test_mitigation egl.test_gate egl.test_detectors egl.test_attack egl.test_telemetry
+sudo -v                                            # cache your sudo password first
+QUICK=1 ./egl/run_eval.sh kernel detection         # 7-minute smoke test (1 repeat, fast ramp)
+rm -rf results/eval                                # throw the smoke test away
+nohup ./egl/run_eval.sh kernel > results/eval_console.log 2>&1 &   # the real thing, ~3.8 h
+tail -f results/eval/progress.log                  # watch it (Ctrl-C only stops watching)
+```
+* **Keep Windows awake.** Settings, System, Power: set "When plugged in, put my
+  device to sleep after" to Never, and keep the lid open or set the lid action
+  to "Do nothing". A sleeping laptop pauses WSL.
+* **sudo must not prompt mid-run.** `sudo -v` caches your password for about
+  15 minutes only. For an unattended run, allow passwordless sudo for this
+  user (`sudo visudo`, add `anirudh ALL=(ALL) NOPASSWD: ALL`), or run the
+  whole command as root.
+* **It resumes.** If it stops (sleep, crash, Ctrl-C), run the same `nohup`
+  command again: finished runs are skipped.
+* **Open vSwitch** is started automatically if WSL did not start it.
+* **One stage at a time:** `./egl/run_eval.sh kernel "mitigation margin"`.
+* **More repeats:** `REPEATS_DETECTION=10 REPEATS=5 ./egl/run_eval.sh kernel`.
+
+### What you get: `results/eval/report/`
+* `summary.md`: every table in one file, mean ± 95 % confidence interval
+* `*.tex`: the same tables as LaTeX, ready for the paper
+* `*.csv`: the numbers
+* `fig_tau.png`, `fig_mitigation.png`: the sweep and mitigation figures
+
+Re-run only the analysis at any time with `python3 -m egl.analyze_eval`.

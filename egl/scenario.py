@@ -33,6 +33,14 @@ GATEWAY_HOST = "h5"   # absorbs the server's replies to spoofed sources
 CROWD_HOSTS = ("h2", "h3", "h4", "h6", "h7", "h8", "h9")  # never h1/h5/h10
 
 
+BOT_HOST = "h1"
+
+
+def bot_addresses(size):
+    """Real (non-spoofed) addresses for the completing attacker on h1: 10.0.0.230-249."""
+    return ["10.0.0.%d" % (230 + k) for k in range(min(size, 20))]
+
+
 def pool_addresses(host, size):
     """Extra client addresses for `host`: 10.0.0.20-49 for h2, 50-79 for h3, ...
     (all inside 10.0.0.0/24, so the server reaches them without a router)."""
@@ -69,13 +77,14 @@ def half_open_loop(log):
 
 class Scenario:
     def __init__(self, datapath="kernel", controller_port=6653, backlog=511,
-                 new_visitors=False, pool=0, log_dir=None):
+                 new_visitors=False, pool=0, log_dir=None, bots=0):
         """backlog: the server's connection queue (listen backlog and
         tcp_max_syn_backlog). new_visitors: Linux keeps admitting clients it
         recently completed connections with even when its queue is 3/4 full;
         True turns that memory off, so every client is a first-time visitor."""
         setLogLevel("warning")
         self.pool, self.log_dir = pool, log_dir   # step 5: client IP pools, request logs
+        self.bots = bots                          # 5b: real bot addresses on h1
         self.datapath = datapath
         self.backlog, self.new_visitors = backlog, new_visitors
         self.net = Mininet(topo=EGLTopology(datapath=datapath), switch=OVSSwitch,
@@ -101,6 +110,10 @@ class Scenario:
         server.cmd("ip neigh replace %s lladdr %s dev %s nud permanent"
                    % (GATEWAY_IP, gateway.MAC(), server.defaultIntf()))
         server.cmd("python3 -m egl.web_server 80 %d >/dev/null 2>&1 &" % self.backlog)
+        if self.bots:
+            bot = net[BOT_HOST]
+            for addr in bot_addresses(self.bots):
+                bot.cmd("ip addr add %s/24 dev %s" % (addr, bot.defaultIntf()))
         if self.pool:
             for name in CROWD_HOSTS:
                 host = net[name]

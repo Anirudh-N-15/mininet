@@ -27,9 +27,16 @@ start_ryu() {
   [ ${#apps[@]} -gt 0 ] || apps=(egl.egl_controller)
   stop_ryu
   if ! sudo ovs-vsctl show >/dev/null 2>&1; then
-    echo "Open vSwitch is not running. Start it with:"
-    echo "  sudo service openvswitch-switch start"
-    exit 1
+    # WSL often does not start services after a reboot: try once ourselves
+    echo "Open vSwitch is not running; starting it..."
+    sudo service openvswitch-switch start >/dev/null 2>&1 \
+      || sudo /usr/share/openvswitch/scripts/ovs-ctl start >/dev/null 2>&1 || true
+    sleep 2
+    if ! sudo ovs-vsctl show >/dev/null 2>&1; then
+      echo "Open vSwitch is not running. Start it with:"
+      echo "  sudo service openvswitch-switch start"
+      exit 1
+    fi
   fi
   # apps are loaded by MODULE name (egl.x), so all of them share one copy of
   # each event class -- loading by file path can break event delivery
@@ -54,5 +61,6 @@ as_root() {
     "EGL_TELEMETRY_CSV=${EGL_TELEMETRY_CSV:-}" \
     "EGL_DETECTOR_CSV=${EGL_DETECTOR_CSV:-}" \
     "EGL_MITIGATION_CSV=${EGL_MITIGATION_CSV:-}" \
-    "EGL_MITIGATE_ON=${EGL_MITIGATE_ON:-}" "EGL_BYPASS=${EGL_BYPASS:-}" "$@"
+    "EGL_MITIGATE_ON=${EGL_MITIGATE_ON:-}" "EGL_BYPASS=${EGL_BYPASS:-}" \
+    "EGL_METER_MARGIN=${EGL_METER_MARGIN:-}" "$@"
 }
