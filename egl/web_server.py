@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The protected web server (h10): python's http.server with a realistic backlog.
 
-    python3 -m egl.web_server [port]
+    python3 -m egl.web_server [port] [backlog]
 
 python3 -m http.server listens with a backlog of only 5 connections, far below
 real servers (nginx and Apache default to 511). With 5 slots, a handful of
@@ -20,6 +20,8 @@ class Server(ThreadingHTTPServer):
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 80
+    if len(sys.argv) > 2:
+        Server.request_queue_size = int(sys.argv[2])
     os.chdir("/tmp")
     Server(("", port), SimpleHTTPRequestHandler).serve_forever()
 

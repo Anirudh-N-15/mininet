@@ -19,10 +19,26 @@ FORWARD_TABLE = 1
 COOKIE_SYN = 0xE6100001     # client SYN -> server           (detector input x_n)
 COOKIE_FIN = 0xE6100002     # server FIN, from server's port (evidence)
 COOKIE_SYNACK = 0xE6100003  # server SYN-ACK                 (diagnostic)
+COOKIE_BYPASS = 0xE6100004  # step 5: SYN from a verified client, skips the meter
 COOKIE_DEFAULT = 0xE6100000  # table-0 catch-all -> table 1
-COUNTER_NAMES = {COOKIE_SYN: "syn", COOKIE_FIN: "fin", COOKIE_SYNACK: "synack"}
+# several bypass rules share one cookie: their counts are summed
+COUNTER_NAMES = {COOKIE_SYN: "syn", COOKIE_FIN: "fin", COOKIE_SYNACK: "synack",
+                 COOKIE_BYPASS: "bypass"}
 
 IPV4, TCP = 0x0800, 6
+
+
+def syn_fields(cfg):
+    """Match for a client's connection attempt to the server (SYN set, ACK clear)."""
+    return dict(eth_type=IPV4, ip_proto=TCP, ipv4_dst=cfg.server_ip,
+                tcp_dst=cfg.server_tcp_port, tcp_flags=(SYN, SYN | ACK))
+
+
+def fin_fields(cfg):
+    """Match for a FIN sent by the server, arriving on the server's own port."""
+    return dict(in_port=cfg.server_ofport, eth_type=IPV4, ip_proto=TCP,
+                ipv4_src=cfg.server_ip, tcp_src=cfg.server_tcp_port,
+                tcp_flags=(FIN, FIN))
 
 
 def telemetry_rules(cfg):

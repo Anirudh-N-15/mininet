@@ -51,8 +51,16 @@ def build(names):
     return out
 
 
+class EventAlarmCleared(event.EventBase):
+    """A detector went from alarming back to quiet."""
+
+    def __init__(self, detector, wall):
+        super().__init__()
+        self.detector, self.wall = detector, wall
+
+
 class DetectorApp(app_manager.RyuApp):
-    _EVENTS = [EventAlarm]
+    _EVENTS = [EventAlarm, EventAlarmCleared]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,6 +102,8 @@ class DetectorApp(app_manager.RyuApp):
             if v.alarm and not self.alarming[name]:
                 self.logger.warning("ALARM %s: syn=%.1f/s", name, x["syn"])
                 self.send_event_to_observers(EventAlarm(name, ev.wall, x, anchor))
+            elif self.alarming[name] and not v.alarm:
+                self.send_event_to_observers(EventAlarmCleared(name, ev.wall))
             self.alarming[name] = v.alarm
         self._csv.writerow(row)
         self._fh.flush()

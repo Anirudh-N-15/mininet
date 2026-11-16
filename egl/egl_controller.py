@@ -76,8 +76,15 @@ class EGLController(app_manager.RyuApp):
 
         if dp.id == self.cfg.server_dpid:
             for name, prio, cookie, fields in pipeline.telemetry_rules(self.cfg):
+                inst = goto_fwd
+                if name == "fin" and self.cfg.verify_clients:
+                    # step 5: also send the first 128 bytes of every server FIN
+                    # to Ryu. Its destination is a client that really finished
+                    # a connection; the mitigator trusts those clients.
+                    inst = [parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, [
+                        parser.OFPActionOutput(ofp.OFPP_CONTROLLER, 128)])] + goto_fwd
                 self._add(dp, pipeline.TELEMETRY_TABLE, prio,
-                          parser.OFPMatch(**fields), goto_fwd, cookie=cookie)
+                          parser.OFPMatch(**fields), inst, cookie=cookie)
                 self.logger.info("dpid %d: counting rule '%s' installed", dp.id, name)
             self.server_dp = dp
 
@@ -98,6 +105,8 @@ class EGLController(app_manager.RyuApp):
         msg = ev.msg
         dp = msg.datapath
         ofp, parser = dp.ofproto, dp.ofproto_parser
+        if msg.cookie == pipeline.COOKIE_FIN:
+            return  # a FIN copy for the mitigator; the switch already forwarded it
         in_port = msg.match["in_port"]
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
@@ -162,7 +171,7 @@ class EGLController(app_manager.RyuApp):
         for stat in ev.msg.body:
             name = pipeline.COUNTER_NAMES.get(stat.cookie)
             if name:
-                self._pending[name] = stat.packet_count
+                self._pending[name] = self._pending.get(name, 0) + stat.packet_count
         self._pending["_flow"] = True
         self._maybe_close_window()
 

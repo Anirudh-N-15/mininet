@@ -13,7 +13,7 @@ Pure Python, no Ryu: tested by test_telemetry.py.
 from collections import deque
 from dataclasses import dataclass, field
 
-FIELDS = ("syn", "fin", "synack", "srv_tx")
+FIELDS = ("syn", "fin", "synack", "srv_tx", "bypass")
 
 
 @dataclass
@@ -58,6 +58,9 @@ class TelemetryWindow:
             return None
         deltas = {k: _delta(snap.counts.get(k), self._last.counts.get(k))
                   for k in FIELDS}
+        # step 5: SYNs from verified clients are counted by separate bypass
+        # rules; they are still connection attempts, so add them back in
+        deltas["syn"] += deltas["bypass"]
         self._last = snap
         self._history.append((snap.t, deltas))
         while self._history and snap.t - self._history[0][0] >= self.evidence_seconds:

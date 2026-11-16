@@ -25,6 +25,7 @@ class EGLConfig:
     evidence_seconds: float # completion ratio is measured over this sliding window
     min_syn_for_evidence: int  # fewer SYNs than this in the window -> "no evidence"
     telemetry_csv: str      # where every window is logged
+    verify_clients: bool    # step 5: copy server FINs to Ryu to learn verified clients
 
     @classmethod
     def from_env(cls):
@@ -37,4 +38,5 @@ class EGLConfig:
             evidence_seconds=_env("EGL_EVIDENCE_SECONDS", 5.0, float),
             min_syn_for_evidence=_env("EGL_MIN_SYN_EVIDENCE", 3, int),
             telemetry_csv=_env("EGL_TELEMETRY_CSV", "results/egl_telemetry.csv"),
+            verify_clients=_env("EGL_VERIFY_CLIENTS", "0") == "1",
         )
