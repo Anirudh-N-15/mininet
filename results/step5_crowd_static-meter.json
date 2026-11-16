@@ -1,0 +1,55 @@
+{
+  "scenario": "crowd",
+  "policy": "static-meter",
+  "baseline_syn_rate": 5.79,
+  "first_alarm_s": 28.8,
+  "mitigation_seconds": 61.2,
+  "meter_rate_pps": "9.0",
+  "meter_dropped_total": 442,
+  "verified_clients": 137,
+  "meter_dropped_share_pct": 44.8,
+  "users": {
+    "warmup": {
+      "requests": 313,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.004,
+      "slow_pct": 0.0
+    },
+    "event": {
+      "requests": 847,
+      "success_pct": 93.4,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 2.043,
+      "slow_pct": 24.9
+    },
+    "event_unmitigated": {
+      "requests": 227,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.003,
+      "slow_pct": 0.0
+    },
+    "event_mitigated": {
+      "requests": 620,
+      "success_pct": 91.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 2.044,
+      "slow_pct": 34.9
+    }
+  },
+  "half_open": {
+    "warmup": {
+      "peak": 0,
+      "mean": 0.0
+    },
+    "event": {
+      "peak": 0,
+      "mean": 0.0
+    },
+    "event_mitigated": {
+      "peak": 0,
+      "mean": 0.0
+    }
+  }
+}

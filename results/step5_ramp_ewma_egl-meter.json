@@ -1,0 +1,55 @@
+{
+  "scenario": "ramp",
+  "policy": "ewma_egl-meter",
+  "baseline_syn_rate": 5.83,
+  "first_alarm_s": 201.0,
+  "mitigation_seconds": 278.7,
+  "meter_rate_pps": "9.0",
+  "meter_dropped_total": 6505,
+  "verified_clients": 60,
+  "meter_dropped_share_pct": 72.0,
+  "users": {
+    "warmup": {
+      "requests": 313,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.004,
+      "slow_pct": 0.0
+    },
+    "event": {
+      "requests": 1502,
+      "success_pct": 90.6,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 2.043,
+      "slow_pct": 10.3
+    },
+    "event_unmitigated": {
+      "requests": 1178,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.002,
+      "slow_pct": 0.0
+    },
+    "event_mitigated": {
+      "requests": 324,
+      "success_pct": 56.5,
+      "connect_p50_s": 2.039,
+      "connect_p95_s": 2.05,
+      "slow_pct": 76.5
+    }
+  },
+  "half_open": {
+    "warmup": {
+      "peak": 1,
+      "mean": 0.0
+    },
+    "event": {
+      "peak": 258,
+      "mean": 210.0
+    },
+    "event_mitigated": {
+      "peak": 258,
+      "mean": 255.1
+    }
+  }
+}

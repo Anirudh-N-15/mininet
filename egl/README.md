@@ -9,7 +9,8 @@ Built one step at a time. The design is in the Project doc
 | 2 | Frog-boiling ramp attacker | **done, tested on real OVS** |
 | 3 | Detectors: Static, EWMA-z, Half-Space Trees | **done, tested on real OVS** |
 | 4 | Learning Gate + anchor baseline | **done, tested on real OVS** |
-| 5 | Mitigator (OpenFlow meter) + experiment matrix | next |
+| 5a | Mitigation: SYN meter + verified-client bypass | **done, tested on real OVS** |
+| 5b | Evaluation matrix: repeats, tau sweep, ablations, limitation case | next |
 
 ## Step 1: what was built
 
@@ -58,7 +59,7 @@ packet ─► TABLE 0 "count"                         ─► TABLE 1 "forward"
 
 ### Run it
 ```bash
-python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors egl.test_gate   # 41 unit tests
+python3 -m unittest egl.test_telemetry egl.test_attack egl.test_detectors egl.test_gate egl.test_mitigation   # 51 unit tests
 ./egl/run_step1.sh                          # real network, about 50 s
 ./egl/run_step1.sh user                     # if OVS kernel module is missing
 ```
@@ -276,3 +277,80 @@ EGL_TAU=0.5 ./egl/run_step4.sh     # try another threshold
 * **HST + gate catches the ramp earliest (1.87x)** but still false-alarms on
   crowds. Its alarm rule is the limit, not its learning, so the gate
   complements an adaptive detector rather than replacing a good one.
+
+## Step 5a: mitigation that protects the server without hurting users
+
+### The idea in plain words
+When the detector alarms, the switch should stop the flood. The obvious tool
+is a **SYN meter**: let at most N connection attempts per second through.
+But a meter can't tell users from attackers. During a 10x flood, about 9 in
+10 SYNs are fake, so it mostly blocks real users too.
+
+The gate's evidence fixes this. A FIN sent by the server, arriving on the
+server's own cable, proves that its destination **finished a real
+connection**. Those clients are **verified**. During an attack:
+
+* SYNs from verified clients **bypass** the meter (one higher-priority rule each);
+* every other SYN is metered to 1.5 x the gate's clean anchor rate (9/s here).
+
+A spoofed address can never be verified, because a spoofed SYN never
+completes. So the attacker cannot get on the bypass list.
+
+### What was built
+| File | Role |
+|---|---|
+| `mitigator_app.py` | Ryu app. Learns verified clients from FIN copies. On `EventAlarm` from the chosen detector it adds the meter and a bypass rule per verified client (and for clients verified later). It removes everything 10 s after the alarm clears. Logs meter drops each second. Policy via `EGL_MITIGATE_ON` (`none`, `static`, `ewma_egl`, ...) and `EGL_BYPASS` (1 bypass, 0 plain meter). |
+| `egl_controller.py` | With `EGL_VERIFY_CLIENTS=1` the FIN rule also copies 128 bytes of each server FIN to Ryu. These are only completed connections, a few per second, and an attacker cannot add any. |
+| `pipeline.py`, `telemetry.py` | Bypass rules count SYNs under their own cookie; telemetry adds them back so detectors still see all SYNs. Removing the rules causes no spike. |
+| `scenario.py` | **Realistic users**: every user host sends from a pool of 20 addresses (10.0.0.20-229); the server treats every client as a first-time visitor (`tcp_no_metrics_save=1`); every request is logged (code, connect time); half-open connections are sampled each second. |
+| `user_metrics.py` | Success %, connect p50/p95, % of requests that needed a SYN retry. |
+| `check_step5.py`, `run_step5.sh` | One run = scenario x policy; 10 runs by default (about 60 min). |
+| `plot_step5.py` | The figure `results/step5_mitigation.png`. |
+| `test_mitigation.py` | 10 tests. |
+
+### Run it
+```bash
+./egl/run_step5.sh                                          # all 10 runs, about 60 minutes
+./egl/run_step5.sh kernel "abrupt:none abrupt:ewma_egl-bypass"   # a subset
+```
+
+### Result (OVS 3.3.9 userspace datapath, Ryu 4.34; users = new visitors from 20-address pools)
+"Delayed" = the request needed at least one SYN retry (about 1 s or more extra).
+
+| Scenario | Policy | Users OK | Delayed | Server half-open mean / peak |
+|---|---|---|---|---|
+| Abrupt 10x | no mitigation | 100 % | **22 %** | 354 / 385 (queue full) |
+| | EWMA+gate -> plain meter | **33 %** | 67 % | 211 / 257 |
+| | **EWMA+gate -> meter + bypass** | **100 %** | **0 %** | 215 / 258 |
+| Ramp +0.5 %/s to 10x | no mitigation | 100 % | 2.5 % | 232 / **385** |
+| | EWMA+gate -> plain meter | 90.6 % (56.5 % while mitigating) | 10 % (77 % while mitigating) | 210 / 258 |
+| | **EWMA+gate -> meter + bypass** | **100 %** | **0 %** | 210 / **258** |
+| Flash crowd x5 (no attack) | no mitigation | 100 % | 0 % | 0 / 1 |
+| | Static (false alarm) -> plain meter | 93.4 % | **25 %** | 0 / 0 |
+| | Static (false alarm) -> meter + bypass | 100 % | 0 % | 0 / 1 |
+| | EWMA+gate -> meter + bypass | 100 % (never fired) | 0 % | 0 / 0 |
+
+Mitigation started 0.9 s into the abrupt flood and 201 s (at 2.9x) into the ramp.
+
+* **The plain meter protects the server and wrecks the users.** With the
+  bypass the server is protected just as much (half-open peak 385 down to 258)
+  and no user request was delayed or lost.
+* **The bypass also limits the damage of a false alarm.** Static's false
+  alarm on a real crowd delayed 25 % of requests with a plain meter, and none
+  with the bypass, because the crowd's clients had already completed
+  connections.
+* **At Mininet scale Linux copes with a 10x flood on its own** (no requests
+  lost), but the queue fills (385) and up to 22 % of requests wait a second or
+  more. A bigger flood or a smaller server would turn that into failures.
+
+### Notes for the paper
+* **The ramp's half-open mean understates the benefit,** because it includes
+  the 200 s before any alarm. Compare the peaks instead (385 vs 258).
+* **The meter's allowance is now mostly attacker traffic.** The 9 SYN/s for
+  unverified sources go almost entirely to the attacker once real users are
+  verified, so the server still holds about 210-255 half-open. A lower margin
+  cuts that, at the cost of a slower first visit for brand-new users: a
+  parameter for the sensitivity study.
+* **Brand-new visitors** who arrive during an attack must still squeeze
+  through the meter before they can be verified. In our pools most addresses
+  were verified during warm-up. Say so as a limitation.
