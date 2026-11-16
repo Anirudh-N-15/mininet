@@ -188,7 +188,9 @@ def mitigation_table(stage_dir):
         groups[(s["scenario"], s["policy"])].append(s)
     rows = []
     order = {"abrupt": 0, "ramp": 1, "crowd": 2}
-    for (sc, pol), runs in sorted(groups.items(), key=lambda kv: (order.get(kv[0][0], 9), kv[0][1])):
+    rank = lambda pol: (0 if pol == "none" else 1 if "-meter" in pol else 2, pol)
+    for (sc, pol), runs in sorted(groups.items(),
+                                  key=lambda kv: (order.get(kv[0][0], 9), rank(kv[0][1]))):
         ok = mean_ci([r["users"]["event"]["success_pct"] for r in runs])
         delayed = mean_ci([r["users"]["event"]["slow_pct"] for r in runs])
         bad = mean_ci([None if r["users"]["event"]["success_pct"] is None else
@@ -263,11 +265,11 @@ def figures(report, tau_rows, mit_rows):
         fig.patch.set_facecolor(surf)
         axes[0].plot(taus, xf, marker="o", color="#2a78d6", lw=2)
         axes[0].set_ylabel("x-fold of normal at first alarm", color=ink2, fontsize=9)
-        axes[0].set_title("Slow ramp: caught earlier with a higher tau", loc="left", fontsize=10.5, color=ink)
+        axes[0].set_title("Slow spoofed ramp: amplification at first alarm", loc="left", fontsize=10.5, color=ink)
         axes[1].plot(taus, fa, marker="o", color="#eb6834", lw=2)
         axes[1].set_ylabel("flash-crowd runs with a false alarm (%)", color=ink2, fontsize=9)
         axes[1].set_ylim(-5, 105)
-        axes[1].set_title("Real crowd: false alarms once tau is too high", loc="left", fontsize=10.5, color=ink)
+        axes[1].set_title("Real flash crowd: runs with a false alarm", loc="left", fontsize=10.5, color=ink)
         for ax in axes:
             ax.set_xlabel("Learning Gate threshold tau (completion)", color=ink2, fontsize=9)
             ax.grid(color=grid, lw=0.8)
@@ -293,6 +295,8 @@ def figures(report, tau_rows, mit_rows):
                 ax.barh(y, m or 0, color=colors.get(style, "#888"), height=0.6)
                 if h:
                     ax.errorbar(m, y, xerr=h, color=ink, capsize=3, lw=1)
+                ax.text((m or 0) + (h or 0), y, "  %.0f" % (m or 0), va="center",
+                        fontsize=8, color=ink)
             ax.set_xlabel(xl, color=ink2, fontsize=9)
             ax.grid(axis="x", color=grid, lw=0.8)
             ax.set_facecolor(surf)
@@ -304,7 +308,13 @@ def figures(report, tau_rows, mit_rows):
         axes[0].invert_yaxis()
         fig.suptitle("Mitigation over repeated runs (bars = mean, whiskers = 95% CI)",
                      x=0.01, ha="left", fontsize=12, color=ink)
-        fig.tight_layout(rect=(0, 0, 1, 0.93))
+        from matplotlib.patches import Patch
+        fig.legend(handles=[Patch(color=colors["none"], label="no mitigation"),
+                            Patch(color=colors["meter"], label="plain SYN meter"),
+                            Patch(color=colors["bypass"], label="meter + verified-client bypass")],
+                   loc="upper left", bbox_to_anchor=(0.005, 0.95), ncol=3, frameon=False,
+                   fontsize=9)
+        fig.tight_layout(rect=(0, 0, 1, 0.88))
         fig.savefig(os.path.join(report, "fig_mitigation.png"), dpi=200, facecolor=surf)
         plt.close(fig)
 
@@ -330,14 +340,10 @@ def main():
               "False alarms during a legitimate flash crowd (users x5 in 60 s).", "tab:false-alarms")
     md += ["\n## False alarms on a real flash crowd (live)\n", md_table(fa)]
 
-    groups = defaultdict(list)
-    for name, sc, s, _ in det:
-        if sc == "ramp":
-            groups[0.005].append(s)
-    for name, sc, s, _ in detection_runs(os.path.join(args.eval, "growth")):
-        m = re.match(r"g([0-9.]+)_r\d+", name)
-        if m:
-            groups[float(m.group(1))].append(s)
+    groups = defaultdict(list)   # ramp speed -> runs; the speed comes from each result file
+    for name, sc, s, _ in det + detection_runs(os.path.join(args.eval, "growth")):
+        if sc == "ramp" and s.get("growth_per_s") is not None:
+            groups[float(s["growth_per_s"])].append(s)
     g = growth_table(groups)
     write_csv(os.path.join(report, "growth.csv"), g)
     write_tex(os.path.join(report, "growth.tex"), g, "Ramp speed versus detection.", "tab:growth")
