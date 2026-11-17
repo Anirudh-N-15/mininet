@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering\small
+\caption{Detection of an abrupt 10x flood and a slow ramp (+0.5\%/s) to 10x.}\label{tab:detection}
+\begin{tabular}{lllll}
+\toprule
+scenario & detector & detected & first alarm s & x fold at alarm \\
+\midrule
+abrupt & Static & 5/5 & 1.1 $\pm$ 0.2 & 9.44 $\pm$ 2.47 \\
+abrupt & EWMA & 5/5 & 1.1 $\pm$ 0.2 & 9.44 $\pm$ 2.47 \\
+abrupt & HST & 5/5 & 1.1 $\pm$ 0.2 & 9.44 $\pm$ 2.47 \\
+abrupt & EWMA+gate & 5/5 & 1.1 $\pm$ 0.2 & 9.44 $\pm$ 2.47 \\
+abrupt & HST+gate & 5/5 & 1.1 $\pm$ 0.2 & 9.44 $\pm$ 2.47 \\
+ramp & Static & 5/5 & 140.9 $\pm$ 9.0 & 2.21 $\pm$ 0.09 \\
+ramp & EWMA & 1/5 & 378.3 & 10.21 \\
+ramp & HST & 1/5 & 15.2 & 0.52 \\
+ramp & EWMA+gate & 5/5 & 197.7 $\pm$ 7.4 & 2.90 $\pm$ 0.11 \\
+ramp & HST+gate & 5/5 & 122.0 $\pm$ 79.6 & 1.90 $\pm$ 1.01 \\
+\bottomrule
+\end{tabular}
+\end{table}

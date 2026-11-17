@@ -1,0 +1,59 @@
+{
+  "scenario": "crowd",
+  "policy": "static-meter",
+  "growth_per_s": 0.01,
+  "t_users": 1794917656.243,
+  "t_event": 1794917716.243,
+  "t_end": 1794917806.244,
+  "baseline_syn_rate": 5.72,
+  "first_alarm_s": 27.9,
+  "mitigation_seconds": 62.1,
+  "meter_rate_pps": "9.0",
+  "meter_dropped_total": 432,
+  "verified_clients": 134,
+  "meter_dropped_share_pct": 43.9,
+  "users": {
+    "warmup": {
+      "requests": 309,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.0,
+      "connect_p95_s": 0.003,
+      "slow_pct": 0.0
+    },
+    "event": {
+      "requests": 858,
+      "success_pct": 91.4,
+      "connect_p50_s": 0.0,
+      "connect_p95_s": 2.039,
+      "slow_pct": 17.1
+    },
+    "event_unmitigated": {
+      "requests": 213,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.0,
+      "connect_p95_s": 0.002,
+      "slow_pct": 0.0
+    },
+    "event_mitigated": {
+      "requests": 645,
+      "success_pct": 88.5,
+      "connect_p50_s": 0.0,
+      "connect_p95_s": 2.041,
+      "slow_pct": 23.5
+    }
+  },
+  "half_open": {
+    "warmup": {
+      "peak": 1,
+      "mean": 0.0
+    },
+    "event": {
+      "peak": 0,
+      "mean": 0.0
+    },
+    "event_mitigated": {
+      "peak": 0,
+      "mean": 0.0
+    }
+  }
+}

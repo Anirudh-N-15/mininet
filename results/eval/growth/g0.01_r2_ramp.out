@@ -1,0 +1,11 @@
+
+== g0.01_r2, scenario=ramp (normal 5.7 SYN/s, peak 10.7x) ==
+learning gate closed in 216 windows (warm-up: 0)
+detector     warm-up       alarms   first at (s)    at x-fold
+static             0          175           75.2         2.27
+ewma               0            0           None         None
+hst                1            0           None         None
+ewma_egl           0          155           95.2          2.8
+hst_egl            1          155           78.2         2.27
+
+G0.01_R2 (ramp) sanity FAIL

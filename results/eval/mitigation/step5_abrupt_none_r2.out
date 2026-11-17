@@ -1,0 +1,11 @@
+
+== step 5: abrupt, policy none ==
+first alarm of acting detector: None s; mitigating for 0 s; meter None pps, dropped 0 SYNs (None% of offered); 60 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     306     100.0        0.0      0.004       0.0
+event                      212     100.0        0.0      1.026      30.2
+event_unmitigated          212     100.0        0.0      1.026      30.2
+event_mitigated              0      None       None       None      None
+server half-open: warm-up peak 1 | event peak 385 mean 351.0 | while mitigating mean None
+
+STEP 5 (abrupt, none) sanity PASS

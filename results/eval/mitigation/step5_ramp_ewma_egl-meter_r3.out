@@ -1,0 +1,11 @@
+
+== step 5: ramp, policy ewma_egl-meter ==
+first alarm of acting detector: 95.9 s; mitigating for 155.6 s; meter 9.0 pps, dropped 3793 SYNs (73.6% of offered); 60 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     306     100.0        0.0      0.004       0.0
+event                      723      89.1        0.0      2.031      11.8
+event_unmitigated          546     100.0        0.0      0.001       0.0
+event_mitigated            177      55.4      2.029      2.052      77.6
+server half-open: warm-up peak 0 | event peak 258 mean 196.9 | while mitigating mean 255.2
+
+STEP 5 (ramp, ewma_egl-meter) sanity PASS

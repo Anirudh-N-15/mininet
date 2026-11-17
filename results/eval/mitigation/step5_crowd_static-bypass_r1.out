@@ -1,0 +1,11 @@
+
+== step 5: crowd, policy static-bypass ==
+first alarm of acting detector: 28.8 s; mitigating for 61.2 s; meter 9.0 pps, dropped 0 SYNs (0.0% of offered); 140 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     306     100.0        0.0      0.004       0.0
+event                     1648     100.0        0.0      0.002       0.0
+event_unmitigated          222     100.0        0.0      0.002       0.0
+event_mitigated           1426     100.0        0.0      0.002       0.0
+server half-open: warm-up peak 1 | event peak 1 mean 0.0 | while mitigating mean 0.0
+
+STEP 5 (crowd, static-bypass) sanity PASS

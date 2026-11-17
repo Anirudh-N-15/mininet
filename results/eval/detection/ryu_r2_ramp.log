@@ -1,0 +1,41 @@
+loading app egl.egl_controller
+loading app egl.detector_app
+loading app ryu.controller.ofp_handler
+instantiating app egl.egl_controller of EGLController
+EGL config: EGLConfig(server_ip='10.0.0.10', server_tcp_port=80, server_dpid=2, server_ofport=6, poll_seconds=1.0, evidence_seconds=5.0, min_syn_for_evidence=3, telemetry_csv='/home/anirudh/mininet/results/eval/detection/r2_ramp_telemetry.csv', verify_clients=False)
+instantiating app egl.detector_app of DetectorApp
+detectors: ['static', 'ewma', 'hst', 'ewma_egl', 'hst_egl'], gate tau=0.7 drift=None -> /home/anirudh/mininet/results/eval/detection/r2_ramp_detectors.csv
+instantiating app ryu.controller.ofp_handler of OFPHandler
+dpid 2: counting rule 'syn' installed
+dpid 2: counting rule 'fin' installed
+dpid 2: counting rule 'synack' installed
+server 10.0.0.10 confirmed on dpid 2 port 6
+ALARM hst: syn=3.0/s
+ALARM hst_egl: syn=3.0/s
+ALARM hst: syn=4.0/s
+ALARM hst_egl: syn=4.0/s
+ALARM hst_egl: syn=10.0/s
+ALARM hst_egl: syn=11.0/s
+ALARM hst_egl: syn=12.0/s
+ALARM static: syn=13.0/s
+ALARM static: syn=13.0/s
+ALARM static: syn=13.0/s
+ALARM static: syn=13.0/s
+ALARM hst_egl: syn=13.0/s
+ALARM static: syn=13.0/s
+ALARM hst_egl: syn=14.0/s
+ALARM hst_egl: syn=14.0/s
+ALARM hst_egl: syn=14.0/s
+ALARM hst_egl: syn=14.0/s
+ALARM hst_egl: syn=14.0/s
+ALARM hst_egl: syn=15.0/s
+ALARM static: syn=16.0/s
+ALARM ewma_egl: syn=17.0/s
+ALARM ewma_egl: syn=17.0/s
+ALARM ewma_egl: syn=17.0/s
+ALARM ewma_egl: syn=17.0/s
+ALARM ewma_egl: syn=17.0/s
+ALARM ewma_egl: syn=19.0/s
+ALARM hst_egl: syn=21.0/s
+ALARM hst_egl: syn=25.0/s
+ALARM hst: syn=21.0/s

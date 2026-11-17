@@ -1,0 +1,4 @@
+scenario,policy,runs,users_ok_pct,failed_or_delayed_pct,half_open_peak,meter_dropped_pct
+abrupt,ewma_egl-bypass-m0.5,2,98.8 ± 4.4,1.4 ± 2.6,256 ± 0,83.0 ± 3.2
+abrupt,ewma_egl-bypass-m1.0,2,98.8 ± 14.6,1.1 ± 14.6,256 ± 6,80.9 ± 8.3
+abrupt,ewma_egl-bypass-m2.5,2,99.1 ± 4.4,1.2 ± 0.7,259 ± 0,66.0 ± 3.2

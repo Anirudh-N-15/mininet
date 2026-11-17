@@ -1,0 +1,6 @@
+detector,runs_with_false_alarm,x_fold_at_false_alarm
+Static,5/5,2.85 ± 0.42
+EWMA,1/5,3.26
+HST,5/5,1.27 ± 0.28
+EWMA+gate,1/5,3.26
+HST+gate,5/5,1.27 ± 0.28

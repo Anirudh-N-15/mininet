@@ -1,0 +1,11 @@
+
+== step 5: crowd, policy static-meter ==
+first alarm of acting detector: 26.0 s; mitigating for 64.0 s; meter 9.0 pps, dropped 429 SYNs (43.5% of offered); 139 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     306     100.0        0.0      0.004       0.0
+event                      857      90.7        0.0      2.032      16.5
+event_unmitigated          191     100.0        0.0      0.002       0.0
+event_mitigated            666      88.0        0.0      2.035      21.8
+server half-open: warm-up peak 1 | event peak 0 mean 0.0 | while mitigating mean 0.0
+
+STEP 5 (crowd, static-meter) sanity PASS

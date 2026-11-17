@@ -1,0 +1,11 @@
+
+== step 5: crowd, policy none ==
+first alarm of acting detector: None s; mitigating for 0 s; meter None pps, dropped 0 SYNs (None% of offered); 140 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     309     100.0        0.0      0.003       0.0
+event                     1667     100.0        0.0      0.001       0.0
+event_unmitigated         1667     100.0        0.0      0.001       0.0
+event_mitigated              0      None       None       None      None
+server half-open: warm-up peak 0 | event peak 0 mean 0.0 | while mitigating mean None
+
+STEP 5 (crowd, none) sanity PASS

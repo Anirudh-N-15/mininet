@@ -1,0 +1,11 @@
+scenario,detector,detected,first_alarm_s,x_fold_at_alarm
+abrupt,Static,5/5,1.1 ± 0.2,9.44 ± 2.47
+abrupt,EWMA,5/5,1.1 ± 0.2,9.44 ± 2.47
+abrupt,HST,5/5,1.1 ± 0.2,9.44 ± 2.47
+abrupt,EWMA+gate,5/5,1.1 ± 0.2,9.44 ± 2.47
+abrupt,HST+gate,5/5,1.1 ± 0.2,9.44 ± 2.47
+ramp,Static,5/5,140.9 ± 9.0,2.21 ± 0.09
+ramp,EWMA,1/5,378.3,10.21
+ramp,HST,1/5,15.2,0.52
+ramp,EWMA+gate,5/5,197.7 ± 7.4,2.90 ± 0.11
+ramp,HST+gate,5/5,122.0 ± 79.6,1.90 ± 1.01

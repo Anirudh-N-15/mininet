@@ -1,0 +1,11 @@
+
+== step 5: ramp, policy none ==
+first alarm of acting detector: None s; mitigating for 0 s; meter None pps, dropped 0 SYNs (None% of offered); 60 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     306     100.0        0.0      0.004       0.0
+event                     1330     100.0        0.0      0.001       3.5
+event_unmitigated         1330     100.0        0.0      0.001       3.5
+event_mitigated              0      None       None       None      None
+server half-open: warm-up peak 0 | event peak 385 mean 222.8 | while mitigating mean None
+
+STEP 5 (ramp, none) sanity PASS

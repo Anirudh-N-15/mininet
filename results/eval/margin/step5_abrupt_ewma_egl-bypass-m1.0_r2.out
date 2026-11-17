@@ -1,0 +1,11 @@
+
+== step 5: abrupt, policy ewma_egl-bypass-m1.0 ==
+first alarm of acting detector: 0.8 s; mitigating for 59.3 s; meter 6.0 pps, dropped 2860 SYNs (81.6% of offered); 59 verified clients
+users                 requests  success%   conn p50   conn p95  retried%
+warmup                     307     100.0        0.0      0.005       0.0
+event                      302      97.7        0.0      0.001       0.0
+event_unmitigated            5     100.0        0.0        0.0       0.0
+event_mitigated            297      97.6        0.0      0.001       0.0
+server half-open: warm-up peak 0 | event peak 256 mean 191.4 | while mitigating mean 191.4
+
+STEP 5 (abrupt, ewma_egl-bypass-m1.0) sanity PASS

@@ -1,0 +1,43 @@
+{
+  "scenario": "abrupt",
+  "attacker": "spoofed",
+  "t_users": 1794905359.609,
+  "t_event": 1794905419.61,
+  "t_end": 1794905449.736,
+  "baseline_syn_rate": 5.79,
+  "peak_x_fold": 10.53,
+  "detectors": {
+    "static": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.36
+    },
+    "ewma": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.36
+    },
+    "hst": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.36
+    },
+    "ewma_egl": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.36
+    },
+    "hst_egl": {
+      "alarms_in_warmup": 0,
+      "alarm_windows": 29,
+      "first_alarm_s": 1.2,
+      "x_fold_at_first_alarm": 10.36
+    }
+  },
+  "gate_closed_windows": 29,
+  "gate_closed_in_warmup": 0
+}

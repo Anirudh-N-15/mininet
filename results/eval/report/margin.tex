@@ -1,0 +1,13 @@
+\begin{table}[t]
+\centering\small
+\caption{Meter margin (abrupt flood).}\label{tab:margin}
+\begin{tabular}{lllllll}
+\toprule
+scenario & policy & runs & users ok pct & failed or delayed pct & half open peak & meter dropped pct \\
+\midrule
+abrupt & ewma\_egl-bypass-m0.5 & 2 & 98.8 $\pm$ 4.4 & 1.4 $\pm$ 2.6 & 256 $\pm$ 0 & 83.0 $\pm$ 3.2 \\
+abrupt & ewma\_egl-bypass-m1.0 & 2 & 98.8 $\pm$ 14.6 & 1.1 $\pm$ 14.6 & 256 $\pm$ 6 & 80.9 $\pm$ 8.3 \\
+abrupt & ewma\_egl-bypass-m2.5 & 2 & 99.1 $\pm$ 4.4 & 1.2 $\pm$ 0.7 & 259 $\pm$ 0 & 66.0 $\pm$ 3.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
