@@ -116,3 +116,50 @@
 2026-11-17 12:48:21  done  margin/step5_abrupt_ewma_egl-bypass-m2.5_r2
 2026-11-17 12:48:21  === all runs finished; analysing ===
 2026-11-17 12:48:23  === done: see results/eval/report/ ===
+2026-11-17 13:46:14  === run_eval: datapath=kernel stages='detection mitigation' quick=0 ===
+2026-11-17 13:46:14  skip  detection/r1 abrupt (done)
+2026-11-17 13:46:14  skip  detection/r1 crowd (done)
+2026-11-17 13:46:14  skip  detection/r1 ramp (done)
+2026-11-17 13:46:14  skip  detection/r2 abrupt (done)
+2026-11-17 13:46:14  skip  detection/r2 crowd (done)
+2026-11-17 13:46:14  skip  detection/r2 ramp (done)
+2026-11-17 13:46:14  skip  detection/r3 abrupt (done)
+2026-11-17 13:46:14  skip  detection/r3 crowd (done)
+2026-11-17 13:46:14  skip  detection/r3 ramp (done)
+2026-11-17 13:46:14  skip  detection/r4 abrupt (done)
+2026-11-17 13:46:14  skip  detection/r4 crowd (done)
+2026-11-17 13:46:14  start detection/r4 ramp --growth 0.005
+2026-11-17 13:55:26  done  detection/r4 ramp
+2026-11-17 13:55:26  skip  detection/r5 abrupt (done)
+2026-11-17 13:55:26  skip  detection/r5 crowd (done)
+2026-11-17 13:55:26  skip  detection/r5 ramp (done)
+2026-11-17 13:55:26  skip  mitigation/step5_abrupt_none_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_abrupt_ewma_egl-meter_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_abrupt_ewma_egl-bypass_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_crowd_none_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_crowd_static-meter_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_crowd_static-bypass_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_ramp_none_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_ramp_ewma_egl-meter_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_ramp_ewma_egl-bypass_r1 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_abrupt_none_r2 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_abrupt_ewma_egl-meter_r2 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_abrupt_ewma_egl-bypass_r2 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_crowd_none_r2 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_crowd_static-meter_r2 (done)
+2026-11-17 13:55:26  skip  mitigation/step5_crowd_static-bypass_r2 (done)
+2026-11-17 13:55:26  start mitigation/step5_ramp_none_r2
+2026-11-17 14:00:46  done  mitigation/step5_ramp_none_r2
+2026-11-17 14:00:46  skip  mitigation/step5_ramp_ewma_egl-meter_r2 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_ramp_ewma_egl-bypass_r2 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_abrupt_none_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_abrupt_ewma_egl-meter_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_abrupt_ewma_egl-bypass_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_crowd_none_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_crowd_static-meter_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_crowd_static-bypass_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_ramp_none_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_ramp_ewma_egl-meter_r3 (done)
+2026-11-17 14:00:46  skip  mitigation/step5_ramp_ewma_egl-bypass_r3 (done)
+2026-11-17 14:00:46  === all runs finished; analysing ===
+2026-11-17 14:00:48  === done: see results/eval/report/ ===

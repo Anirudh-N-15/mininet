@@ -1,17 +1,17 @@
 {
   "scenario": "ramp",
   "attacker": "spoofed",
-  "t_users": 1794905618.222,
-  "t_event": 1794905678.223,
-  "t_end": 1794909421.79,
-  "baseline_syn_rate": 5.77,
-  "peak_x_fold": 10.56,
+  "t_users": 1794923179.527,
+  "t_event": 1794923239.528,
+  "t_end": 1794923721.334,
+  "baseline_syn_rate": 5.83,
+  "peak_x_fold": 10.45,
   "detectors": {
     "static": {
       "alarms_in_warmup": 0,
-      "alarm_windows": 333,
-      "first_alarm_s": 145.3,
-      "x_fold_at_first_alarm": 2.25
+      "alarm_windows": 346,
+      "first_alarm_s": 130.0,
+      "x_fold_at_first_alarm": 2.06
     },
     "ewma": {
       "alarms_in_warmup": 0,
@@ -28,17 +28,17 @@
     "ewma_egl": {
       "alarms_in_warmup": 0,
       "alarm_windows": 276,
-      "first_alarm_s": 202.4,
-      "x_fold_at_first_alarm": 2.94
+      "first_alarm_s": 200.1,
+      "x_fold_at_first_alarm": 2.91
     },
     "hst_egl": {
       "alarms_in_warmup": 0,
-      "alarm_windows": 316,
-      "first_alarm_s": 118.3,
-      "x_fold_at_first_alarm": 1.91
+      "alarm_windows": 330,
+      "first_alarm_s": 130.0,
+      "x_fold_at_first_alarm": 2.06
     }
   },
   "growth_per_s": 0.005,
-  "gate_closed_windows": 410,
+  "gate_closed_windows": 409,
   "gate_closed_in_warmup": 0
 }
