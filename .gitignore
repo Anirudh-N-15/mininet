@@ -15,3 +15,16 @@ trunk
 
 # Ryu run logs (machine-specific)
 results/ryu_*.log
+
+# LaTeX build files
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
