@@ -197,7 +197,7 @@ Counting packets cannot tell a slow attack from a growing crowd of real users:
 \column{0.5\textwidth}
 \textbf{Network}
 \begin{itemize}\small
-\item 3 Open vSwitch switches, 10 hosts (Mininet)
+\item 3 Open vSwitch switches, 12 hosts (Mininet)
 \item Ryu controller, OpenFlow 1.3, two tables
 \item Web server h10 with a realistic queue (511, the nginx default); every visitor treated as new
 \end{itemize}
@@ -205,7 +205,7 @@ Counting packets cannot tell a slow attack from a growing crowd of real users:
 \begin{itemize}\small
 \item \textbf{Users}: \texttt{curl} every 0.5\,s from pools of 20 addresses per host
 \item \textbf{Flash crowd}: users grow $5\times$ in 60\,s (no attack)
-\item \textbf{Attacker}: spoofed SYNs, abrupt $10\times$ or a slow ramp
+\item \textbf{Attackers}: h1, h11, h12 on three switches share spoofed SYNs, abrupt $10\times$ or a slow ramp
 \end{itemize}
 \column{0.5\textwidth}
 \textbf{Detectors compared (all on the same numbers)}
@@ -215,7 +215,7 @@ Counting packets cannot tell a slow attack from a growing crowd of real users:
 \end{itemize}
 \textbf{Evaluation}
 \begin{itemize}\small
-\item 82 live runs, laptop, kernel datapath
+\item 82 live runs (laptop, kernel datapath) + 13 validation runs
 \item 3--5 repeats per case, mean $\pm$ 95\% CI
 \item $\tau$ and drift sweeps by replaying every recorded run offline
 \end{itemize}
@@ -308,6 +308,47 @@ Without mitigation the server's queue fills (385); with it, it stays at Linux's 
 \end{frame}
 
 % ------------------------------------------------------------------ 14
+\begin{frame}{Fixed since the first version: attacks during warm-up}
+\begin{itemize}\setlength\itemsep{2.5mm}
+\item Every detector first watches for 60\,s to learn ``normal'' (\textbf{warm-up}). The network works
+      normally meanwhile; only alarms are off.
+\item \textbf{First version:} the gate guarded learning only \emph{after} warm-up. An attack that started
+      during warm-up was learned as normal and never caught.
+\item \textbf{Fix:} warm-up seconds count only when the gate accepts them. If the gate keeps rejecting,
+      warm-up ends after 3$\times$ its length using the clean seconds it already has.
+\end{itemize}
+\vspace{2mm}
+\centering\small
+\begin{tabular}{lc}
+\toprule
+\textbf{10$\times$ flood starting 10\,s after the users} & \textbf{caught} \\
+\midrule
+Static, EWMA, Half-Space Trees & \textcolor{bad}{0/3} \\
+EWMA + gate, \textbf{first version} & \textcolor{bad}{0/3} \\
+\textbf{EWMA + gate, fixed} & \textbf{3/3} (49\,s after it starts) \\
+HST + gate, fixed & 3/3 (49\,s) \\
+\bottomrule
+\end{tabular}\\[2mm]
+\aside{Runs without an attack in warm-up are unchanged: replaying all 48 recorded results gives the same answers.}
+\end{frame}
+
+\begin{frame}{The attack is distributed: same results}
+\centering\small
+Validation runs with the attack split over three hosts (h1, h11, h12) on three switches:\\[3mm]
+\begin{tabular}{lcc}
+\toprule
+ & \textbf{3 attacker hosts} & \textbf{1 attacker host (main runs)} \\
+\midrule
+Abrupt 10$\times$: caught by every detector & 2/2, $\approx$1\,s & 5/5, 1.1\,s \\
+Ramp +1\%/s: EWMA + gate & \textbf{2/2 at 3.09$\times$} & 3/3 at 2.83$\times$ \\
+Ramp +1\%/s: plain EWMA & 0/2 & 1/3 \\
+Completing bots: EWMA + gate & 0/1 & 0/3 \\
+Bypass: users failed or delayed & 0.7\% (none: 20.6\%) & 0.4\% (none: 34.5\%) \\
+\bottomrule
+\end{tabular}\\[3mm]
+\aside{The detector watches total traffic reaching the server, so how many machines send it does not matter.}
+\end{frame}
+
 \begin{frame}{Choosing the threshold $\tau$}
 \centering
 \includegraphics[width=0.95\linewidth]{fig_tau.png}

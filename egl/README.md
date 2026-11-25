@@ -365,6 +365,8 @@ Mitigation started 0.9 s into the abrupt flood and 201 s (at 2.9x) into the ramp
 | `completing` | **Limitation:** 20 bots with real addresses doing full HTTP requests | 3 repeats | 11 min |
 | `mitigation` | none / plain meter / bypass on abrupt, crowd (Static acts), ramp +1 %/s | 3 repeats each | 100 min |
 | `margin` | Meter allowance 0.5x, 1x, 2.5x the clean rate | 2 repeats each | 15 min |
+| `early` | Attack starts inside warm-up: first-version gate vs fixed gate | 3 repeats | 12 min |
+| `distributed` | Validation with the attack split over h1, h11, h12 | 13 runs | 45 min |
 
 The **gate threshold tau** and the **drift budget** need no extra runs: the
 analysis replays every recorded run offline with other settings (the gate and
@@ -400,3 +402,41 @@ tail -f results/eval/progress.log                  # watch it (Ctrl-C only stops
 * `fig_tau.png`, `fig_mitigation.png`: the sweep and mitigation figures
 
 Re-run only the analysis at any time with `python3 -m egl.analyze_eval`.
+
+## Step 6: three fixes after the first evaluation
+
+### Fix 1: the gate now also guards warm-up
+**The gap.** In the first version every detector learned *every* warm-up
+second, whatever the gate said. A flood that started inside the first 60 s was
+learned as "normal" and never caught (0/3 runs).
+
+**The fix** (`detectors.py`, `Detector._warm_step`): a warm-up second counts
+only if the gate accepts it. If the gate keeps rejecting, warm-up ends after
+3x its normal length, using the clean seconds it has (at least 5). HST builds
+its reference only from those clean seconds.
+
+**Result** (`early` stage, 3 runs, flood starts 10 s after the users):
+EWMA + gate and HST + gate catch it 3/3, 49 s after it starts; the first
+version and the plain detectors miss it 0/3. The first version is still
+available as `ewma_egl_legacy` / `hst_egl_legacy` for this comparison.
+Replaying all 48 recorded runs gives the same answers as before.
+
+### Fix 2: the mitigation claim on the slides
+The half-open queue sits at about 258 under attack whether or not we mitigate:
+that is Linux's own limit. What the bypass changes is the users: 0.4 % of
+requests failed or delayed instead of 34.5 %. Slide 13 now says that, and
+slide 14 shows it second by second (`plot_timeline.py`).
+
+### Fix 3: the attack is distributed
+The attack is split over three hosts on two switches (h1 and h11 on s1, h12
+on s3); each sends a third of the rate. Completing bots use 8 real addresses
+per host (10.0.0.230-253). `--attackers h1` reproduces the old single-host runs.
+
+**Result** (`distributed` stage, 13 runs): the same as the single-host runs.
+The detector sees total traffic arriving at the server, so the number of
+sending machines makes no difference.
+
+```bash
+./egl/run_eval.sh kernel "early distributed"
+python3 -m egl.analyze_eval
+```
