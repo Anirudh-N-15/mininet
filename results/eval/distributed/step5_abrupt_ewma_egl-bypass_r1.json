@@ -1,0 +1,64 @@
+{
+  "scenario": "abrupt",
+  "policy": "ewma_egl-bypass",
+  "growth_per_s": 0.01,
+  "attack_hosts": [
+    "h1",
+    "h11",
+    "h12"
+  ],
+  "t_users": 1795645339.622,
+  "t_event": 1795645399.623,
+  "t_end": 1795645459.676,
+  "baseline_syn_rate": 5.88,
+  "first_alarm_s": 0.8,
+  "mitigation_seconds": 59.3,
+  "meter_rate_pps": "9.0",
+  "meter_dropped_total": 2666,
+  "verified_clients": 60,
+  "meter_dropped_share_pct": 75.8,
+  "users": {
+    "warmup": {
+      "requests": 315,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.003,
+      "slow_pct": 0.0
+    },
+    "event": {
+      "requests": 336,
+      "success_pct": 99.4,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.002,
+      "slow_pct": 0.3
+    },
+    "event_unmitigated": {
+      "requests": 6,
+      "success_pct": 100.0,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.003,
+      "slow_pct": 0.0
+    },
+    "event_mitigated": {
+      "requests": 330,
+      "success_pct": 99.4,
+      "connect_p50_s": 0.001,
+      "connect_p95_s": 0.002,
+      "slow_pct": 0.3
+    }
+  },
+  "half_open": {
+    "warmup": {
+      "peak": 0,
+      "mean": 0.0
+    },
+    "event": {
+      "peak": 258,
+      "mean": 212.5
+    },
+    "event_mitigated": {
+      "peak": 258,
+      "mean": 215.8
+    }
+  }
+}

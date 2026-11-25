@@ -163,3 +163,35 @@
 2026-11-17 14:00:46  skip  mitigation/step5_ramp_ewma_egl-bypass_r3 (done)
 2026-11-17 14:00:46  === all runs finished; analysing ===
 2026-11-17 14:00:48  === done: see results/eval/report/ ===
+2026-11-25 22:02:57  === run_eval: datapath=user stages='early' quick=0 ===
+2026-11-25 22:02:57  start early/r1 early --early-at 10
+2026-11-25 22:05:19  done  early/r1 early
+2026-11-25 22:05:19  === all runs finished; analysing ===
+2026-11-25 22:05:20  === done: see results/eval/report/ ===
+2026-11-25 22:06:07  === run_eval: datapath=user stages='early distributed' quick=0 ===
+2026-11-25 22:06:07  start early/r1 early --early-at 10
+2026-11-25 22:08:27  done  early/r1 early
+2026-11-25 22:08:27  start early/r2 early --early-at 10
+2026-11-25 22:10:46  done  early/r2 early
+2026-11-25 22:10:46  start early/r3 early --early-at 10
+2026-11-25 22:13:05  done  early/r3 early
+2026-11-25 22:13:05  start distributed/r1 abrupt --attackers h1,h11,h12
+2026-11-25 22:14:45  done  distributed/r1 abrupt
+2026-11-25 22:14:45  start distributed/r1 ramp --growth 0.01 --attackers h1,h11,h12
+2026-11-25 22:20:06  done  distributed/r1 ramp
+2026-11-25 22:20:06  start distributed/step5_abrupt_none_r1
+2026-11-25 22:22:14  done  distributed/step5_abrupt_none_r1
+2026-11-25 22:22:14  start distributed/step5_abrupt_ewma_egl-bypass_r1
+2026-11-25 22:24:23  done  distributed/step5_abrupt_ewma_egl-bypass_r1
+2026-11-25 22:24:23  start distributed/r2 abrupt --attackers h1,h11,h12
+2026-11-25 22:26:02  done  distributed/r2 abrupt
+2026-11-25 22:26:02  start distributed/r2 ramp --growth 0.01 --attackers h1,h11,h12
+2026-11-25 22:31:23  done  distributed/r2 ramp
+2026-11-25 22:31:23  start distributed/step5_abrupt_none_r2
+2026-11-25 22:33:32  done  distributed/step5_abrupt_none_r2
+2026-11-25 22:33:32  start distributed/step5_abrupt_ewma_egl-bypass_r2
+2026-11-25 22:35:41  done  distributed/step5_abrupt_ewma_egl-bypass_r2
+2026-11-25 22:35:41  start distributed/c1 ramp --growth 0.02 --attacker completing --attackers h1,h11,h12
+2026-11-25 22:39:06  done  distributed/c1 ramp
+2026-11-25 22:39:06  === all runs finished; analysing ===
+2026-11-25 22:39:07  === done: see results/eval/report/ ===

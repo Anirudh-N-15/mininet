@@ -1,0 +1,6 @@
+scenario,detector,detected,first_alarm_s,x_fold_at_alarm
+ramp,Static,1/1,41.0,2.38
+ramp,EWMA,0/1,--,--
+ramp,HST,1/1,16.0,1.53
+ramp,EWMA+gate,0/1,--,--
+ramp,HST+gate,1/1,16.0,1.53

@@ -383,12 +383,18 @@ def main():
               "of the gate (v1) vs.\\ the fixed warm-up.", "tab:early")
     md += ["\n## Attack during warm-up: v1 vs fixed gate (live)\n", md_table(e)]
 
-    dist = detection_runs(os.path.join(args.eval, "distributed"))
+    dist_all = detection_runs(os.path.join(args.eval, "distributed"))
+    dist = [r for r in dist_all if r[2].get("attacker", "spoofed") == "spoofed"]
+    dist_comp = [r for r in dist_all if r[2].get("attacker") == "completing"]
     d = detection_table(dist, scenarios=("abrupt", "ramp"))
     write_csv(os.path.join(report, "distributed.csv"), d)
     write_tex(os.path.join(report, "distributed.tex"), d,
               "Validation: the attack split over three hosts (h1, h11, h12).", "tab:distributed")
     md += ["\n## Distributed attack, 3 hosts (live validation)\n", md_table(d)]
+    if dist_comp:
+        dc = detection_table(dist_comp, scenarios=("ramp",))
+        write_csv(os.path.join(report, "distributed_completing.csv"), dc)
+        md += ["\n## Distributed completing bots, 3 hosts (live validation)\n", md_table(dc)]
     dmit = mitigation_table(os.path.join(args.eval, "distributed"))
     if dmit:
         write_csv(os.path.join(report, "distributed_mitigation.csv"), dmit)

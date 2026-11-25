@@ -1,0 +1,8 @@
+scenario,detector,detected,first_alarm_s,x_fold_at_alarm
+early,Static,0/3,--,--
+early,EWMA,0/3,--,--
+early,HST,0/3,--,--
+early,EWMA+gate,3/3,49.0 ± 0.1,10.30 ± 2.07
+early,HST+gate,3/3,49.0 ± 0.1,10.30 ± 2.07
+early,EWMA+gate (v1 warm-up),0/3,--,--
+early,HST+gate (v1 warm-up),0/3,--,--

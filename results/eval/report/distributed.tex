@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering\small
+\caption{Validation: the attack split over three hosts (h1, h11, h12).}\label{tab:distributed}
+\begin{tabular}{lllll}
+\toprule
+scenario & detector & detected & first alarm s & x fold at alarm \\
+\midrule
+abrupt & Static & 2/2 & 0.9 $\pm$ 1.3 & 6.39 $\pm$ 9.97 \\
+abrupt & EWMA & 2/2 & 0.9 $\pm$ 1.3 & 6.39 $\pm$ 9.97 \\
+abrupt & HST & 2/2 & 0.9 $\pm$ 1.3 & 6.39 $\pm$ 9.97 \\
+abrupt & EWMA+gate & 2/2 & 0.9 $\pm$ 1.3 & 6.39 $\pm$ 9.97 \\
+abrupt & HST+gate & 2/2 & 0.9 $\pm$ 1.3 & 6.39 $\pm$ 9.97 \\
+ramp & Static & 2/2 & 75.7 $\pm$ 5.7 & 2.40 $\pm$ 2.16 \\
+ramp & EWMA & 0/2 & -- & -- \\
+ramp & HST & 1/2 & 36.2 & 1.54 \\
+ramp & EWMA+gate & 2/2 & 98.2 $\pm$ 0.0 & 3.09 $\pm$ 0.00 \\
+ramp & HST+gate & 2/2 & 57.7 $\pm$ 273.2 & 2.05 $\pm$ 6.54 \\
+\bottomrule
+\end{tabular}
+\end{table}
