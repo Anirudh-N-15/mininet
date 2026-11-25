@@ -288,13 +288,23 @@ HST + gate       & 5/5 (1.1\,s) & 5/5 at 1.93$\times$ & \textcolor{bad}{5/5} \\
 \end{frame}
 
 % ------------------------------------------------------------------ 13
-\begin{frame}{Result 2: the server is protected and users do not notice}
+\begin{frame}{Result 2: users are not slowed down, and the server's queue never fills}
 \centering
-\includegraphics[width=0.92\linewidth]{fig_mitigation.png}\\
+\includegraphics[width=0.86\linewidth]{fig_mitigation.png}\\
 \small
-Abrupt flood: requests failed or delayed --
-\textcolor{muted}{none 34.5\%}, \textcolor{bad}{plain meter 87.7\%}, \textbf{bypass 0.4\%}.\quad
-Server queue peak 385 (full) $\to$ 258.
+Abrupt flood, 3 runs: requests failed or delayed --
+\textcolor{muted}{none 34.5\%}, \textcolor{bad}{plain meter 87.7\%}, \textbf{bypass 0.4\%}.\\
+Without mitigation the server's queue fills (385); with it, it stays at Linux's own limit ($\approx$258).
+\end{frame}
+
+\begin{frame}{Result 2, second by second}
+\centering
+\includegraphics[height=0.64\textheight]{fig_timeline_abrupt.png}
+\begin{itemize}\small
+\item \textbf{Left, no mitigation:} the queue is full within 7\,s; about a third of users wait an extra 1--2\,s.
+\item \textbf{Right, with bypass:} mitigation starts in the alarm's second (1\,s); the queue stays at
+      Linux's own $\approx$258 level and every user connects instantly.
+\end{itemize}
 \end{frame}
 
 % ------------------------------------------------------------------ 14
