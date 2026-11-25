@@ -97,3 +97,40 @@ class FrogBoilingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WarmupFixTest(unittest.TestCase):
+    """The first version let a detector learn every warm-up second, even when
+    the Learning Gate said the traffic was not real. An attack that started
+    during warm-up then became part of "normal". The fix: warm-up seconds
+    count only when the gate accepts them."""
+
+    def run_early_attack(self, det, gate_warmup):
+        rng = random.Random(4)
+        alarms = 0
+        for t in range(200):
+            attack = t >= 10                      # 10x flood starts in warm-up
+            x = normal(rng)
+            if attack:
+                x = {"syn": x["syn"] + 54, "srv_tx": x["srv_tx"] + 54}
+            gate_open = not attack                # completion ~0.1 under attack
+            allow = gate_open if (gate_warmup or not det.warming) else True
+            alarms += det.observe(x, allow_learning=allow).alarm
+        return alarms
+
+    def test_v1_learns_an_attack_that_starts_in_warmup(self):
+        self.assertEqual(self.run_early_attack(EWMA(), gate_warmup=False), 0)
+
+    def test_fixed_warmup_catches_it(self):
+        self.assertGreater(self.run_early_attack(EWMA(), gate_warmup=True), 0)
+
+    def test_fixed_warmup_catches_it_hst(self):
+        self.assertGreater(self.run_early_attack(HST(), gate_warmup=True), 0)
+
+    def test_without_attack_the_fix_changes_nothing(self):
+        a, b = EWMA(), EWMA()
+        rng1, rng2 = random.Random(9), random.Random(9)
+        for _ in range(100):
+            va = a.observe(normal(rng1), allow_learning=True)
+            vb = b.observe(normal(rng2), allow_learning=True)
+            self.assertEqual((va.alarm, va.threshold), (vb.alarm, vb.threshold))

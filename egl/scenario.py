@@ -26,19 +26,18 @@ from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.node import OVSSwitch, RemoteController
 
-from egl.topology import SERVER_HOST, SERVER_IP, EGLTopology
+from egl.topology import ATTACKERS, SERVER_HOST, SERVER_IP, EGLTopology
 
 GATEWAY_IP = "10.0.0.254"
 GATEWAY_HOST = "h5"   # absorbs the server's replies to spoofed sources
 CROWD_HOSTS = ("h2", "h3", "h4", "h6", "h7", "h8", "h9")  # never h1/h5/h10
 
 
-BOT_HOST = "h1"
-
-
-def bot_addresses(size):
-    """Real (non-spoofed) addresses for the completing attacker on h1: 10.0.0.230-249."""
-    return ["10.0.0.%d" % (230 + k) for k in range(min(size, 20))]
+def bot_addresses(host, size=8):
+    """Real (non-spoofed) bot addresses for the completing attacker, 8 per
+    attacker host: h1 10.0.0.230-237, h11 .238-245, h12 .246-253."""
+    i = ATTACKERS.index(host)
+    return ["10.0.0.%d" % (230 + 8 * i + k) for k in range(min(size, 8))]
 
 
 def pool_addresses(host, size):
@@ -111,9 +110,10 @@ class Scenario:
                    % (GATEWAY_IP, gateway.MAC(), server.defaultIntf()))
         server.cmd("python3 -m egl.web_server 80 %d >/dev/null 2>&1 &" % self.backlog)
         if self.bots:
-            bot = net[BOT_HOST]
-            for addr in bot_addresses(self.bots):
-                bot.cmd("ip addr add %s/24 dev %s" % (addr, bot.defaultIntf()))
+            for name in ATTACKERS:
+                bot = net[name]
+                for addr in bot_addresses(name, self.bots):
+                    bot.cmd("ip addr add %s/24 dev %s" % (addr, bot.defaultIntf()))
         if self.pool:
             for name in CROWD_HOSTS:
                 host = net[name]
@@ -168,6 +168,25 @@ class Scenario:
 
         threading.Thread(target=run, daemon=True).start()
         return target
+
+    def start_attack(self, mode, base, growth, cap, duration, log, completing=False,
+                     hosts=ATTACKERS):
+        """Split one attack evenly over `hosts` (a distributed attack).
+        Each host sends 1/k of the schedule with its own random seed and its own
+        log (the first host logs to `log`, the others to log_<host>.csv).
+        completing=True: real bots doing full HTTP requests from their own
+        addresses instead of spoofed SYNs. Returns the processes."""
+        procs = []
+        for i, host in enumerate(hosts):
+            tool = ("egl.http_flood --sources %s" % ",".join(bot_addresses(host, self.bots or 8))
+                    if completing else "egl.syn_sender")
+            path = log if i == 0 else log[:-4] + "_%s.csv" % host
+            procs.append(self.run_bg(host, (
+                "python3 -m %s --dst %s --mode %s --base %s --growth %s --cap %s "
+                "--duration %s --log %s --seed %d"
+                % (tool, SERVER_IP, mode, base / len(hosts), growth, cap, duration,
+                   path, 1 + i))))
+        return procs
 
     def run_bg(self, host, cmd):
         proc = self.net[host].popen(cmd, shell=True)

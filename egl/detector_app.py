@@ -7,7 +7,9 @@ EventTelemetry class)
 
 EGL_DETECTORS lists what to run, e.g. "static,ewma,hst,ewma_egl,hst_egl".
 A name ending in "_egl" is that detector wrapped by the Learning Gate
-(egl/gate.py): it may learn only when the gate is open. Plain and gated copies
+(egl/gate.py): it may learn only when the gate is open -- including during
+its warm-up. "_egl_legacy" is the first version, whose warm-up ignored the
+gate (kept so experiments can show that limitation next to the fix). Plain and gated copies
 see exactly the same windows, so one run compares them fairly.
 
   EGL_TAU    completion threshold for the gate (default 0.7)
@@ -40,15 +42,28 @@ class EventAlarm(event.EventBase):
 
 
 def build(names):
-    """'ewma,ewma_egl' -> [('ewma', EWMA(), False), ('ewma_egl', EWMA(), True)]"""
+    """'ewma,ewma_egl,ewma_egl_legacy' ->
+    [('ewma', EWMA(), None), ('ewma_egl', EWMA(), 'egl'), ('ewma_egl_legacy', EWMA(), 'legacy')]"""
     out = []
     for name in (n.strip() for n in names.split(",")):
         if not name:
             continue
-        gated = name.endswith("_egl")
-        base = name[:-4] if gated else name
-        out.append((name, detectors.make(base)[0], gated))
+        mode, base = None, name
+        if name.endswith("_egl_legacy"):
+            mode, base = "legacy", name[:-len("_egl_legacy")]
+        elif name.endswith("_egl"):
+            mode, base = "egl", name[:-len("_egl")]
+        out.append((name, detectors.make(base)[0], mode))
     return out
+
+
+def allow_for(mode, det, gate_open):
+    """Is this detector allowed to learn this second?"""
+    if mode is None:
+        return True                       # plain detector: always learns
+    if mode == "legacy" and det.warming:
+        return True                       # first version: warm-up ignored the gate
+    return gate_open
 
 
 class EventAlarmCleared(event.EventBase):
@@ -95,7 +110,7 @@ class DetectorApp(app_manager.RyuApp):
                int(decision.open), decision.reason,
                "" if anchor[0] is None else "%.2f" % anchor[0]]
         for name, det, gated in self.dets:
-            v = det.observe(x, w.dt, allow_learning=decision.open if gated else True)
+            v = det.observe(x, w.dt, allow_learning=allow_for(gated, det, decision.open))
             row += [int(v.alarm), "%.3f" % v.score,
                     "" if v.threshold is None else "%.3f" % v.threshold,
                     int(v.learned), int(v.warming)]

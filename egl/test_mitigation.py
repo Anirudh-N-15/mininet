@@ -85,3 +85,19 @@ class UserMetricsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DistributedTest(unittest.TestCase):
+    def test_bot_addresses_disjoint_and_free(self):
+        from egl.scenario import bot_addresses
+        from egl.topology import ATTACKERS
+        seen = set()
+        for h in ATTACKERS:
+            a = set(bot_addresses(h))
+            self.assertEqual(len(a), 8)
+            self.assertFalse(seen & a)
+            seen |= a
+        last = max(int(x.split(".")[-1]) for x in seen)
+        self.assertLess(last, 254)                                # .254 = gateway
+        users = {x for h in ("h2", "h3", "h4", "h6", "h7", "h8", "h9") for x in pool_addresses(h, 30)}
+        self.assertFalse(seen & users)

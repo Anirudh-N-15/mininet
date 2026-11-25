@@ -24,17 +24,16 @@ import os
 import time
 
 from egl.attack import seconds_to_reach
-from egl.scenario import Scenario, bot_addresses
+from egl.scenario import Scenario
 from egl.topology import SERVER_IP
 
 USERS = ("h2", "h3", "h6")
-ATTACKER = "h1"
 SETTLE = 6
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scenario", choices=("abrupt", "ramp", "crowd"), required=True)
+    ap.add_argument("--scenario", choices=("abrupt", "ramp", "crowd", "early"), required=True)
     ap.add_argument("--datapath", default="kernel", choices=("kernel", "user"))
     ap.add_argument("--detector-csv", default=os.environ.get(
         "EGL_DETECTOR_CSV", "results/egl_detectors.csv"))
@@ -47,30 +46,35 @@ def main():
     ap.add_argument("--prefix", default="step3", help="result file prefix (step4 for the gate)")
     ap.add_argument("--attacker", choices=("spoofed", "completing"), default="spoofed",
                     help="spoofed SYN flood, or real bots doing full HTTP requests")
+    ap.add_argument("--attackers", default="h1,h11,h12",
+                    help="hosts the attack is split over (h1 alone = the original single-host runs)")
+    ap.add_argument("--early-at", type=float, default=10.0,
+                    help="scenario 'early': attack starts this many seconds after the users,"
+                         " i.e. inside the detectors' warm-up")
     args = ap.parse_args()
     out_dir = os.path.dirname(os.path.abspath(args.detector_csv))
 
-    bots = 20 if args.attacker == "completing" else 0
+    bots = 8 if args.attacker == "completing" else 0
+    hosts = tuple(h for h in args.attackers.split(",") if h)
     with Scenario(args.datapath, bots=bots) as sc:
         sc.start_users(USERS)
         t_users = time.time()
-        time.sleep(args.warmup)
+        # 'early': the attack starts INSIDE the detectors' warm-up
+        time.sleep(args.early_at if args.scenario == "early" else args.warmup)
         t_event = time.time()
         if args.scenario == "crowd":
             sc.start_crowd(len(USERS), args.crowd_factor, args.crowd_seconds)
             time.sleep(args.crowd_seconds + 30)
         else:
-            dur = (seconds_to_reach(args.cap, args.growth) + 20
-                   if args.scenario == "ramp" else 30)
+            dur = {"ramp": seconds_to_reach(args.cap, args.growth) + 20,
+                   "abrupt": 30, "early": 120}[args.scenario]
             mode = "ramp" if args.scenario == "ramp" else "abrupt"
-            tool = ("egl.http_flood --sources %s" % ",".join(bot_addresses(bots))
-                    if args.attacker == "completing" else "egl.syn_sender")
-            sender = sc.run_bg(ATTACKER, (
-                "python3 -m %s --dst %s --mode %s --base %s --growth %s "
-                "--cap %s --duration %s --log %s"
-                % (tool, SERVER_IP, mode, args.base, args.growth, args.cap, dur,
-                   os.path.join(out_dir, "%s_%s_attack.csv" % (args.prefix, args.scenario)))))
-            sender.wait(timeout=dur + 30)
+            senders = sc.start_attack(
+                mode, args.base, args.growth, args.cap, dur,
+                os.path.join(out_dir, "%s_%s_attack.csv" % (args.prefix, args.scenario)),
+                completing=args.attacker == "completing", hosts=hosts)
+            for sender in senders:
+                sender.wait(timeout=dur + 30)
         t_end = time.time()
         time.sleep(3)
 
@@ -84,6 +88,7 @@ def main():
     peak = max(float(r["syn_rate"]) for r in during) / base_mean
 
     summary = {"scenario": args.scenario, "attacker": args.attacker,
+               "attack_hosts": list(hosts),
                "t_users": round(t_users, 3), "t_event": round(t_event, 3),
                "t_end": round(t_end, 3),
                "baseline_syn_rate": round(base_mean, 2),
@@ -122,6 +127,8 @@ def main():
         print("%-9s %10d %12d %14s %12s" % (d, s["alarms_in_warmup"], s["alarm_windows"],
                                             s["first_alarm_s"], s["x_fold_at_first_alarm"]))
     ok = all(s["alarms_in_warmup"] == 0 for s in summary["detectors"].values())
+    if args.scenario == "early":
+        ok = True   # the attack is inside the warm-up on purpose; the outcome is the result
     if args.scenario == "abrupt":
         ok = ok and all(s["first_alarm_s"] is not None and s["first_alarm_s"] <= 5
                         for s in summary["detectors"].values())

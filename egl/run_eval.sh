@@ -2,7 +2,7 @@
 # Step 5b: the full evaluation for the paper (about 3.8 hours with defaults).
 #
 #   ./egl/run_eval.sh [kernel|user] [stages]
-#   stages (default all): detection growth completing mitigation margin
+#   stages (default all): detection growth completing mitigation margin early distributed
 #
 # RESUMABLE: a run whose result JSON already exists is skipped, so if the
 # laptop sleeps or something crashes, run the same command again.
@@ -19,10 +19,16 @@
 #   completing  bots with real addresses doing full HTTP requests (limitation)
 #   mitigation  none / plain meter / bypass on abrupt, crowd (Static acts), ramp +1 %/s
 #   margin      bypass with meter margin 0.5, 1.0, 2.5 on the abrupt flood
+#   early       attack starts INSIDE the warm-up: first-version gate vs fixed gate
+#   distributed validation subset with the attack split over h1, h11 and h12
+#
+# Since 26 Nov every attack is split over h1, h11 and h12 by default (a real
+# DDoS). Results from before that used h1 alone; each result file records
+# its attack hosts.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 DATAPATH=${1:-kernel}
-STAGES=${2:-"detection growth completing mitigation margin"}
+STAGES=${2:-"detection growth completing mitigation margin early distributed"}
 QUICK=${QUICK:-0}
 if [ "$QUICK" = 1 ]; then
   REPEATS_DETECTION=1; REPEATS=1; G_DET=0.05; G_MIT=0.05; MARGINS="1.0"; GROWTHS="0.05"
@@ -40,7 +46,7 @@ det_run() {
   local stage=$1 name=$2 sc=$3; shift 3
   local dir="$EVAL/$stage"; mkdir -p "$dir"
   if [ -f "$dir/${name}_${sc}.json" ]; then log "skip  $stage/$name $sc (done)"; return; fi
-  export EGL_DETECTORS=static,ewma,hst,ewma_egl,hst_egl EGL_VERIFY_CLIENTS=0
+  export EGL_DETECTORS=${DET_SET:-static,ewma,hst,ewma_egl,hst_egl} EGL_VERIFY_CLIENTS=0
   export EGL_TELEMETRY_CSV="$dir/${name}_${sc}_telemetry.csv"
   export EGL_DETECTOR_CSV="$dir/${name}_${sc}_detectors.csv"
   log "start $stage/$name $sc $*"
@@ -52,9 +58,9 @@ det_run() {
   log "done  $stage/$name $sc"
 }
 
-# one mitigation run: <stage> <scenario> <policy> <suffix> <margin> <growth>
+# one mitigation run: <stage> <scenario> <policy> <suffix> <margin> <growth> [attackers]
 mit_run() {
-  local stage=$1 sc=$2 policy=$3 suffix=$4 margin=$5 growth=$6
+  local stage=$1 sc=$2 policy=$3 suffix=$4 margin=$5 growth=$6 attackers=${7:-h1,h11,h12}
   local dir="$EVAL/$stage"; mkdir -p "$dir"
   export EGL_METER_MARGIN=$margin
   if [ "$policy" = none ]; then export EGL_MITIGATE_ON=none EGL_BYPASS=1
@@ -73,7 +79,7 @@ mit_run() {
   log "start $stage/$tag"
   start_ryu "$dir/ryu_${tag}.log" egl.egl_controller egl.detector_app egl.mitigator_app
   as_root /usr/bin/python3 -m egl.check_step5 --scenario "$sc" --datapath "$DATAPATH" \
-    --results "$dir" --suffix "$suffix" --growth "$growth" \
+    --results "$dir" --suffix "$suffix" --growth "$growth" --attackers "$attackers" \
     >"$dir/$tag.out" 2>&1 || log "  !! sanity check failed (see $dir/$tag.out)"
   stop_ryu
   log "done  $stage/$tag"
@@ -104,6 +110,20 @@ for STAGE in $STAGES; do
       for m in $MARGINS; do
         for r in $(seq 1 2); do mit_run margin abrupt ewma_egl-bypass "_r$r" "$m" "$G_MIT"; done
       done ;;
+    early)
+      for r in $(seq 1 "$REPEATS"); do
+        DET_SET=static,ewma,hst,ewma_egl,hst_egl,ewma_egl_legacy,hst_egl_legacy \
+          det_run early "r$r" early --early-at 10
+      done ;;
+    distributed)
+      for r in $(seq 1 2); do
+        det_run distributed "r$r" abrupt --attackers h1,h11,h12
+        det_run distributed "r$r" ramp --growth "$G_MIT" --attackers h1,h11,h12
+        for p in none ewma_egl-bypass; do
+          mit_run distributed abrupt "$p" "_r$r" 1.5 "$G_MIT" h1,h11,h12
+        done
+      done
+      det_run distributed "c1" ramp --growth 0.02 --attacker completing --attackers h1,h11,h12 ;;
     *) log "unknown stage $STAGE" ;;
   esac
 done

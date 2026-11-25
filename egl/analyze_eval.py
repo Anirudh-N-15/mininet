@@ -32,9 +32,10 @@ from collections import defaultdict
 from egl import detectors
 from egl.gate import LearningGate
 
-DETS = ("static", "ewma", "hst", "ewma_egl", "hst_egl")
+DETS = ("static", "ewma", "hst", "ewma_egl", "hst_egl", "ewma_egl_legacy", "hst_egl_legacy")
 NAMES = {"static": "Static", "ewma": "EWMA", "hst": "HST",
-         "ewma_egl": "EWMA+gate", "hst_egl": "HST+gate"}
+         "ewma_egl": "EWMA+gate", "hst_egl": "HST+gate",
+         "ewma_egl_legacy": "EWMA+gate (v1 warm-up)", "hst_egl_legacy": "HST+gate (v1 warm-up)"}
 T975 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365,
         8: 2.306, 9: 2.262, 10: 2.228, 15: 2.131, 20: 2.086, 30: 2.042}
 
@@ -92,6 +93,8 @@ def detection_table(runs, scenarios=("abrupt", "ramp")):
             continue
         for d in DETS:
             hits = [s["detectors"][d] for s in sel if d in s["detectors"]]
+            if not hits:
+                continue
             caught = [h for h in hits if h["first_alarm_s"] is not None]
             t = mean_ci([h["first_alarm_s"] for h in caught])
             x = mean_ci([h["x_fold_at_first_alarm"] for h in caught])
@@ -107,6 +110,8 @@ def false_alarm_table(runs):
     rows = []
     for d in DETS:
         hits = [s["detectors"][d] for s in sel if d in s["detectors"]]
+        if not hits:
+            continue
         fa = [h for h in hits if h["alarm_windows"] > 0]
         x = mean_ci([h["x_fold_at_first_alarm"] for h in fa])
         rows.append({"detector": NAMES[d], "runs_with_false_alarm": "%d/%d" % (len(fa), len(hits)),
@@ -120,6 +125,8 @@ def growth_table(groups):
     for g in sorted(groups):
         for d in DETS:
             hits = [s["detectors"][d] for s in groups[g] if d in s["detectors"]]
+            if not hits:
+                continue
             caught = [h for h in hits if h["first_alarm_s"] is not None]
             x = mean_ci([h["x_fold_at_first_alarm"] for h in caught])
             rows.append({"growth_per_s": "%g%%" % (100 * g), "detector": NAMES[d],
@@ -367,6 +374,25 @@ def main():
     drift_rows = sweep(kinds, (None, 0.05, 0.02, 0.01, 0.005), "drift") if kinds else []
     write_csv(os.path.join(report, "drift_sweep.csv"), drift_rows)
     md += ["\n## Drift budget, EWMA+gate with tau = 0.7 (offline replay)\n", md_table(drift_rows)]
+
+    early = detection_runs(os.path.join(args.eval, "early"))
+    e = detection_table(early, scenarios=("early",))
+    write_csv(os.path.join(report, "early.csv"), e)
+    write_tex(os.path.join(report, "early.tex"), e,
+              "Attack starting inside the warm-up (10 s after the users): first version "
+              "of the gate (v1) vs.\\ the fixed warm-up.", "tab:early")
+    md += ["\n## Attack during warm-up: v1 vs fixed gate (live)\n", md_table(e)]
+
+    dist = detection_runs(os.path.join(args.eval, "distributed"))
+    d = detection_table(dist, scenarios=("abrupt", "ramp"))
+    write_csv(os.path.join(report, "distributed.csv"), d)
+    write_tex(os.path.join(report, "distributed.tex"), d,
+              "Validation: the attack split over three hosts (h1, h11, h12).", "tab:distributed")
+    md += ["\n## Distributed attack, 3 hosts (live validation)\n", md_table(d)]
+    dmit = mitigation_table(os.path.join(args.eval, "distributed"))
+    if dmit:
+        write_csv(os.path.join(report, "distributed_mitigation.csv"), dmit)
+        md += ["\n## Distributed attack: mitigation (live validation)\n", md_table(dmit)]
 
     mit = mitigation_table(os.path.join(args.eval, "mitigation"))
     write_csv(os.path.join(report, "mitigation.csv"), mit)

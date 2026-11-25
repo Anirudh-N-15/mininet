@@ -35,11 +35,31 @@ class Verdict:
     warming: bool       # still in warm-up (never alarms then)
 
 
+MIN_WARM = 5   # fewest clean warm-up seconds a detector will build "normal" from
+
+
 class Detector:
     name = "base"
 
     def observe(self, x, dt=1.0, allow_learning=True):
         raise NotImplementedError
+
+    @property
+    def warming(self):
+        raise NotImplementedError
+
+    def _warm_step(self, value, allow_learning):
+        """One warm-up second. Since the warm-up fix, a second the Learning Gate
+        rejects is NOT added to the warm-up sample, so an attack that starts
+        during warm-up cannot become part of "normal". Returns True when the
+        warm-up is complete: `warmup` accepted seconds, or (if the gate keeps
+        rejecting, e.g. an attack is running) at least MIN_WARM accepted
+        seconds after waiting 3 x warmup seconds in total."""
+        self._warm_seen = getattr(self, "_warm_seen", 0) + 1
+        if allow_learning:
+            self._warm.append(value)
+        n = len(self._warm)
+        return n >= self.warmup or (self._warm_seen >= 3 * self.warmup and n >= MIN_WARM)
 
 
 def _poisson_sigma(sigma, mu, dt):
@@ -57,15 +77,18 @@ class Static(Detector):
         self.kappa, self.warmup = kappa, warmup
         self._warm, self.mu, self.sd = [], None, None
 
+    @property
+    def warming(self):
+        return self.mu is None
+
     def observe(self, x, dt=1.0, allow_learning=True):
         v = x["syn"]
         if self.mu is None:
-            self._warm.append(v)
-            if len(self._warm) >= self.warmup:
+            if self._warm_step(v, allow_learning):
                 n = len(self._warm)
                 self.mu = sum(self._warm) / n
                 self.sd = math.sqrt(sum((w - self.mu) ** 2 for w in self._warm) / n)
-            return Verdict(False, v, None, True, True)
+            return Verdict(False, v, None, allow_learning, True)
         thr = self.mu + self.kappa * _poisson_sigma(self.sd, self.mu, dt)
         return Verdict(v > thr, v, thr, False, False)
 
@@ -84,15 +107,18 @@ class EWMA(Detector):
         return self.mu + self.kappa * _poisson_sigma(math.sqrt(max(self.var, 0.0)),
                                                      self.mu, dt)
 
+    @property
+    def warming(self):
+        return self.mu is None
+
     def observe(self, x, dt=1.0, allow_learning=True):
         v = x["syn"]
         if self.mu is None:
-            self._warm.append(v)
-            if len(self._warm) >= self.warmup:
+            if self._warm_step(v, allow_learning):
                 n = len(self._warm)
                 self.mu = sum(self._warm) / n
                 self.var = sum((w - self.mu) ** 2 for w in self._warm) / n
-            return Verdict(False, v, None, True, True)
+            return Verdict(False, v, None, allow_learning, True)
         thr = self.threshold(dt)
         alarm = v > thr
         learn = (not alarm) and allow_learning
@@ -185,32 +211,61 @@ class HST(Detector):
         self._windows_done = 0  # reference windows completed
         self._calib = []
         self.thr = None
+        self._warm_seen = 0     # warm-up seconds seen, learned or not
+        self._warm_points = []  # clean warm-up points (gate-accepted), for calibration
 
     def _point(self, x):
         return [math.log1p(max(x.get(f, 0.0), 0.0)) for f in self.FEATURES]
 
-    def _learn(self, p):
-        for t in self.trees:
-            t.count(p)
-        self._seen += 1
-        if self._seen >= self.window:
+    def _learn(self, p, force_swap=False):
+        if p is not None:
+            for t in self.trees:
+                t.count(p)
+            self._seen += 1
+        if self._seen >= self.window or (force_swap and self._seen > 0):
             for t in self.trees:
                 t.swap()
             self._seen = 0
             self._windows_done += 1
 
+    @property
+    def warming(self):
+        return self.thr is None
+
     def observe(self, x, dt=1.0, allow_learning=True):
         p = self._point(x)
+        if self.thr is None:
+            # Warm-up (fixed): only seconds the gate accepts are learned or used
+            # for calibration; if the gate keeps rejecting (an attack is on),
+            # finish with what we have after waiting 3 x the normal length.
+            self._warm_seen += 1
+            waited = self._warm_seen >= 3 * self.window
         if self._windows_done == 0:              # warm-up 1: fill a reference
-            self._learn(p)
-            return Verdict(False, 0.0, None, True, True)
+            if allow_learning:
+                self._learn(p)
+                self._warm_points.append(p)
+            if waited and MIN_WARM <= self._seen < self.window:
+                # the gate keeps rejecting (an attack is running): build the
+                # reference from the clean seconds we have and calibrate on
+                # them straight away -- no clean seconds are coming to wait for
+                self._learn(None, force_swap=True)
+                self._calib = [sum(t.score(q, self.size_limit) for t in self.trees)
+                               / len(self.trees) for q in self._warm_points]
+                self.thr = self.factor * min(self._calib)
+            return Verdict(False, 0.0, None, allow_learning, True)
         s = sum(t.score(p, self.size_limit) for t in self.trees) / len(self.trees)
         if self.thr is None:                     # warm-up 2: calibrate threshold
-            self._calib.append(s)
-            self._learn(p)
-            if len(self._calib) >= self.window:
+            if allow_learning:
+                self._calib.append(s)
+                self._learn(p)
+            if waited and len(self._calib) < MIN_WARM and self._warm_points:
+                # the gate kept rejecting (an attack is running): calibrate on
+                # the clean seconds already seen in warm-up 1 instead
+                self._calib += [sum(t.score(q, self.size_limit) for t in self.trees)
+                                / len(self.trees) for q in self._warm_points]
+            if len(self._calib) >= self.window or (waited and len(self._calib) >= MIN_WARM):
                 self.thr = self.factor * min(self._calib)
-            return Verdict(False, s, None, True, True)
+            return Verdict(False, s, None, allow_learning, True)
         alarm = s < self.thr
         learn = (not alarm) and allow_learning
         if learn:

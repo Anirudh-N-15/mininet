@@ -34,7 +34,6 @@ from egl.scenario import Scenario
 from egl.topology import SERVER_IP
 
 USERS = ("h2", "h3", "h6")
-ATTACKER = "h1"
 SETTLE = 6
 
 
@@ -81,6 +80,8 @@ def main():
     ap.add_argument("--pool", type=int, default=20, help="client addresses per user host")
     ap.add_argument("--base", type=float, default=6.0)
     ap.add_argument("--suffix", default="", help="appended to result names, e.g. _r2")
+    ap.add_argument("--attackers", default="h1,h11,h12",
+                    help="hosts the attack is split over (h1 alone = the original single-host runs)")
     args = ap.parse_args()
     label = policy_label()
     tag = "step5_%s_%s%s" % (args.scenario, label, args.suffix)
@@ -107,12 +108,10 @@ def main():
         else:
             mode = "ramp" if args.scenario == "ramp" else "abrupt"
             dur = seconds_to_reach(args.cap, args.growth) + 20 if mode == "ramp" else 60
-            sender = sc.run_bg(ATTACKER, (
-                "python3 -m egl.syn_sender --dst %s --mode %s --base %s --growth %s "
-                "--cap %s --duration %s --log %s"
-                % (SERVER_IP, mode, args.base, args.growth, args.cap, dur,
-                   os.path.join(res, tag + "_attack.csv"))))
-            sender.wait(timeout=dur + 30)
+            for sender in sc.start_attack(mode, args.base, args.growth, args.cap, dur,
+                                          os.path.join(res, tag + "_attack.csv"),
+                                          hosts=tuple(h for h in args.attackers.split(",") if h)):
+                sender.wait(timeout=dur + 30)
         t_end = time.time()
         time.sleep(2)
 
@@ -148,6 +147,7 @@ def main():
     warm = [(t_users + SETTLE, t_event)]
     summary = {
         "scenario": args.scenario, "policy": label, "growth_per_s": args.growth,
+        "attack_hosts": args.attackers.split(","),
         "t_users": round(t_users, 3), "t_event": round(t_event, 3), "t_end": round(t_end, 3),
         "baseline_syn_rate": round(base_mean, 2),
         "first_alarm_s": None if first_alarm is None else round(first_alarm, 1),
