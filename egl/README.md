@@ -366,7 +366,7 @@ Mitigation started 0.9 s into the abrupt flood and 201 s (at 2.9x) into the ramp
 | `mitigation` | none / plain meter / bypass on abrupt, crowd (Static acts), ramp +1 %/s | 3 repeats each | 100 min |
 | `margin` | Meter allowance 0.5x, 1x, 2.5x the clean rate | 2 repeats each | 15 min |
 | `early` | Attack starts inside warm-up: first-version gate vs fixed gate | 3 repeats | 12 min |
-| `distributed` | Validation with the attack split over h1, h11, h12 | 13 runs | 45 min |
+| `distributed` | Validation with the attack split over h1, h11, h12 | 9 runs | 35 min |
 
 The **gate threshold tau** and the **drift budget** need no extra runs: the
 analysis replays every recorded run offline with other settings (the gate and
@@ -422,17 +422,20 @@ available as `ewma_egl_legacy` / `hst_egl_legacy` for this comparison.
 Replaying all 48 recorded runs gives the same answers as before.
 
 ### Fix 2: the mitigation claim on the slides
-The half-open queue sits at about 258 under attack whether or not we mitigate:
-that is Linux's own limit. What the bypass changes is the users: 0.4 % of
-requests failed or delayed instead of 34.5 %. Slide 13 now says that, and
-slide 14 shows it second by second (`plot_timeline.py`).
+Without mitigation the half-open queue fills (385, where Linux starts
+refusing new SYNs). With either meter it levels off at about 258, just above
+half full, where Linux starts pruning old half-open entries early; the meter
+does not push it lower. The real difference is for users: 0.4 % of requests
+failed or delayed with the bypass, 87.7 % with a plain meter, 34.5 % with no
+mitigation. Slide 13 now says that, and slide 14 shows it second by second
+(`plot_timeline.py`).
 
 ### Fix 3: the attack is distributed
 The attack is split over three hosts on two switches (h1 and h11 on s1, h12
 on s3); each sends a third of the rate. Completing bots use 8 real addresses
 per host (10.0.0.230-253). `--attackers h1` reproduces the old single-host runs.
 
-**Result** (`distributed` stage, 13 runs): the same as the single-host runs.
+**Result** (`distributed` stage, 9 runs): the same as the single-host runs.
 The detector sees total traffic arriving at the server, so the number of
 sending machines makes no difference.
 
