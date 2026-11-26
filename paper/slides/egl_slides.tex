@@ -142,7 +142,8 @@ Counting packets cannot tell a slow attack from a growing crowd of real users:
 \item Counting is done by \textbf{switch rules}, not by sending packets to the controller.
       The controller asks for the counters once a second, whatever the attack size.
       \aside{(Sending packets to the controller is itself a known weak spot of SDN.)}
-\item Both counters use one OpenFlow 1.3 feature: matching on \textbf{TCP flags}
+\item Both counters use one switch feature: matching on \textbf{TCP flags}
+      \aside{(an ONF extension to OpenFlow 1.3, standard in 1.5; Open vSwitch supports it)}
       (``SYN set, ACK clear'' $=$ a new connection; ``FIN set'' $=$ a finished one).
 \end{itemize}
 \end{frame}

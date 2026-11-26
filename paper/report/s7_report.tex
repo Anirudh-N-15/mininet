@@ -619,7 +619,8 @@ addresses, and the server treats every visitor as a first-time visitor.
 The monitoring component installs a two-table pipeline on the switch that the
 server is connected to (s2). Table 0 counts and protects; table 1 performs
 normal MAC-learning forwarding. Table 0 contains counting rules that match on
-TCP flags, a feature of OpenFlow 1.3:
+TCP flags (an ONF extension to OpenFlow 1.3, standard from OpenFlow 1.5,
+supported by Open vSwitch and Ryu):
 \begin{itemize}
   \item \textbf{Client SYNs to the server:} SYN flag set and ACK flag clear,
   i.e.\ a new connection attempt.

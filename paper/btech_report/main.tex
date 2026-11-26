@@ -165,7 +165,7 @@ Legitimate clients complete their connections, so $e_n \approx 1$, even in a fla
 \item The monitoring must use flow statistics only, so the controller's load does not grow with the attack.
 \item Detection must react within about one second of an abrupt attack.
 \item The gate must work with any online-learning detector without changing the detector itself.
-\item The solution must use standard OpenFlow 1.3 features available in Open vSwitch.
+\item The solution must use OpenFlow 1.3 features available in Open vSwitch (including the ONF TCP-flags match extension).
 \item Experiments must be repeatable, scripted and resumable.
 \end{enumerate}
 
@@ -210,7 +210,7 @@ The proposed system, Evidence-Gated Learning (EGL), adds two ideas to an SDN DDo
 Refer to Figure~\ref{fig:architecture}: the detector receives the SYN rate $x_n$, the gate receives the completion ratio $e_n$ and decides whether the detector may learn, and an alarm from the detector triggers the mitigator, which uses the gate's trusted baseline to set its rate limit.
 
 \section{Modules and Algorithms}
-\textbf{Telemetry.} Table~0 holds counting rules that match on TCP flags (an OpenFlow 1.3 feature): client SYNs to the server (SYN set, ACK clear), server FINs that enter the switch on the server's own port, and server SYN-ACKs. Each rule counts and then passes packets to table~1, so forwarding is unchanged. The controller requests these counters once per second and computes per-second rates. Because the FIN rule is tied to the server's port, an attacker elsewhere cannot add to it.
+\textbf{Telemetry.} Table~0 holds counting rules that match on TCP flags (an ONF extension to OpenFlow 1.3, standard from OpenFlow 1.5, supported by Open vSwitch and Ryu): client SYNs to the server (SYN set, ACK clear), server FINs that enter the switch on the server's own port, and server SYN-ACKs. Each rule counts and then passes packets to table~1, so forwarding is unchanged. The controller requests these counters once per second and computes per-second rates. Because the FIN rule is tied to the server's port, an attacker elsewhere cannot add to it.
 
 \textbf{Detectors.} Three lightweight detectors share one interface, \texttt{observe(rates, allow\_learning)}. \emph{Static} computes the mean and standard deviation of the SYN rate during warm-up and alarms when the z-score exceeds 3; it never adapts afterwards. \emph{EWMA} updates $\mu_{n+1} = \mu_n + \beta(x_n-\mu_n)$ and $\sigma^2_{n+1} = (1-\beta)\sigma^2_n + \beta(x_n-\mu_n)^2$, alarms when $x_n > \mu_n + \kappa\sigma_n$ ($\beta=0.1$, $\kappa=3$) and never lets $\sigma$ fall below $\sqrt{\mu}$. \emph{Half-Space Trees} \citep{tan2011hst} build 25 random trees of depth 10 over the logarithms of the SYN rate and of the packets sent to the server; a point that falls into rarely visited regions is anomalous. The reference is renewed every 20 seconds, and the alarm threshold is half of the lowest calibration score. The detectors never see $e_n$.
 
@@ -264,7 +264,7 @@ Refer to Figure~\ref{fig:architecture}: the detector receives the SYN rate $x_n$
 \begin{itemize}
 \item \textbf{Mininet 2.3.0} \citep{lantz2010mininet} for the emulated network.
 \item \textbf{Open vSwitch} \citep{pfaff2015ovs}: version 3.3.9 with the user-space datapath (development container, Ubuntu 24.04) and the Linux kernel datapath (laptop, Ubuntu on WSL2) for the main evaluation.
-\item \textbf{Ryu 4.34} \citep{ryu} as the SDN controller, using \textbf{OpenFlow 1.3} \citep{onf2012of13} (TCP flag matching, meters, multiple tables).
+\item \textbf{Ryu 4.34} \citep{ryu} as the SDN controller, using \textbf{OpenFlow 1.3} \citep{onf2012of13} (multiple tables, meters, and TCP-flag matching through the ONF extension).
 \item \textbf{Python 3} for the controller applications, traffic generators and analysis; \textbf{matplotlib} for figures; \texttt{curl} for legitimate users; Linux raw sockets for the attack generator.
 \item \textbf{Bash} scripts for automation, and Python \texttt{unittest} for 62 unit tests.
 \end{itemize}
